@@ -1,7 +1,5 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
-import { useLiveArrivals } from "@/lib/use-live-arrivals";
 import type { DashboardData } from "@/types/dashboard";
 import { SavedTripCard } from "./saved-trip-card";
 import { SavedTripForm } from "./saved-trip-form";
@@ -12,8 +10,6 @@ type DashboardShellProps = {
 };
 
 export function DashboardShell({ dashboardData, userName }: DashboardShellProps) {
-  const liveTrips = useLiveArrivals(dashboardData);
-
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-6 rounded-[2rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[0_20px_50px_rgba(15,23,42,0.06)] sm:flex-row sm:items-start sm:justify-between">
@@ -26,15 +22,17 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
             Save your usual CTA trips and this screen will tell you what is safe to board right now.
           </p>
         </div>
-        <UserButton />
+        <div className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+          Demo mode
+        </div>
       </header>
 
       <section className="grid gap-8 lg:grid-cols-[360px_1fr]">
         <SavedTripForm stations={dashboardData.stations} />
 
         <div className="space-y-5">
-          {liveTrips.length > 0 ? (
-            liveTrips.map((trip) => <SavedTripCard key={trip.id} trip={trip} />)
+          {dashboardData.trips.length > 0 ? (
+            dashboardData.trips.map((trip) => <SavedTripCard key={trip.id} trip={trip} />)
           ) : (
             <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/70 p-8">
               <h2 className="text-2xl font-bold text-slate-900">No saved trips yet.</h2>

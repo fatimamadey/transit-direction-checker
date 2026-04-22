@@ -1,10 +1,6 @@
 import Link from "next/link";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
 
-export default async function HomePage() {
-  const { userId } = await auth();
-
+export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-12">
       <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
@@ -22,27 +18,12 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-4">
-            {!userId ? (
-              <>
-              <SignUpButton>
-                <button className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
-                  Get started
-                </button>
-              </SignUpButton>
-              <SignInButton>
-                <button className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400">
-                  Sign in
-                </button>
-              </SignInButton>
-              </>
-            ) : (
-              <Link
-                className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
-                href="/dashboard"
-              >
-                Open dashboard
-              </Link>
-            )}
+            <Link
+              className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+              href="/dashboard"
+            >
+              Open demo dashboard
+            </Link>
           </div>
         </section>
 

@@ -1,16 +1,10 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { DEMO_USER_ID } from "@/lib/demo-user";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 
 export async function createSavedTripAction(formData: FormData) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    throw new Error("You must be signed in.");
-  }
-
   const label = String(formData.get("label") ?? "").trim();
   const originStationId = String(formData.get("origin_station_id") ?? "").trim();
   const destinationStationId = String(formData.get("destination_station_id") ?? "").trim();
@@ -24,7 +18,7 @@ export async function createSavedTripAction(formData: FormData) {
   const supabase = getServiceRoleClient();
 
   const { error } = await supabase.from("saved_trips").insert({
-    clerk_user_id: userId,
+    clerk_user_id: DEMO_USER_ID,
     label,
     origin_station_id: originStationId,
     destination_station_id: destinationStationId,
@@ -40,19 +34,13 @@ export async function createSavedTripAction(formData: FormData) {
 }
 
 export async function deleteSavedTripAction(savedTripId: string) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    throw new Error("You must be signed in.");
-  }
-
   const supabase = getServiceRoleClient();
 
   const { error } = await supabase
     .from("saved_trips")
     .delete()
     .eq("id", savedTripId)
-    .eq("clerk_user_id", userId);
+    .eq("clerk_user_id", DEMO_USER_ID);
 
   if (error) {
     throw new Error(error.message);
