@@ -130,4 +130,16 @@ using (
   )
 );
 
+create policy "live_arrivals_read_demo_trip_public"
+on live_arrivals
+for select
+using (
+  exists (
+    select 1
+    from saved_trips
+    where saved_trips.id = live_arrivals.saved_trip_id
+      and saved_trips.clerk_user_id = 'demo-user'
+  )
+);
+
 alter publication supabase_realtime add table live_arrivals;

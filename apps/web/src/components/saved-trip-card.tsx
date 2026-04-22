@@ -1,6 +1,7 @@
 "use client";
 
 import { deleteSavedTripAction } from "@/actions/saved-trips";
+import { getRouteStyle } from "@/lib/route-style";
 import type { DashboardTrip } from "@/types/dashboard";
 
 type SavedTripCardProps = {
@@ -18,18 +19,23 @@ function formatArrival(minutes: number) {
 export function SavedTripCard({ trip }: SavedTripCardProps) {
   const nextSafe = trip.rightDirectionArrivals[0];
   const deleteAction = deleteSavedTripAction.bind(null, trip.id);
+  const routeStyle = getRouteStyle(trip.route);
 
   return (
-    <article className="rounded-[2rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
+    <article className={`rounded-[2.2rem] border border-[var(--border)] bg-[var(--card)] p-6 ${routeStyle.glow}`}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{trip.route} Line</p>
-          <h2 className="mt-2 text-3xl font-black text-slate-900">{trip.label}</h2>
-          <p className="mt-2 text-slate-600">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] ${routeStyle.badge}`}>
+              {trip.route} Line
+            </span>
+            <span className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+              Safe direction: {trip.preferredDirection}
+            </span>
+          </div>
+          <h2 className="text-3xl font-black text-slate-900">{trip.label}</h2>
+          <p className="text-slate-600">
             {trip.originStationName} to {trip.destinationStationName}
-          </p>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            Safe direction: {trip.preferredDirection}
           </p>
         </div>
 
@@ -44,11 +50,11 @@ export function SavedTripCard({ trip }: SavedTripCardProps) {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-3xl bg-[var(--green-bg)] p-5">
+        <div className="rounded-[1.8rem] bg-[var(--green-bg)] p-5">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--green-text)]">
             RIGHT DIRECTION
           </p>
-          <h3 className="mt-2 text-3xl font-black text-[var(--green-text)]">
+          <h3 className="mt-2 text-4xl font-black text-[var(--green-text)]">
             {nextSafe ? "Yes, take this one." : "No safe train yet."}
           </h3>
           <p className="mt-3 text-sm leading-6 text-[var(--green-text)]">
@@ -58,11 +64,11 @@ export function SavedTripCard({ trip }: SavedTripCardProps) {
           </p>
         </div>
 
-        <div className="rounded-3xl bg-[var(--red-bg)] p-5">
+        <div className="rounded-[1.8rem] bg-[var(--red-bg)] p-5">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--red-text)]">
             WRONG DIRECTION
           </p>
-          <h3 className="mt-2 text-3xl font-black text-[var(--red-text)]">Nope, not this one.</h3>
+          <h3 className="mt-2 text-4xl font-black text-[var(--red-text)]">Nope, not this one.</h3>
           <p className="mt-3 text-sm leading-6 text-[var(--red-text)]">
             {trip.wrongDirectionArrivals[0]
               ? `${trip.wrongDirectionArrivals[0].destination_name ?? "Another direction"} in ${formatArrival(trip.wrongDirectionArrivals[0].minutes_away)}`
@@ -73,7 +79,7 @@ export function SavedTripCard({ trip }: SavedTripCardProps) {
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {trip.rightDirectionArrivals.slice(0, 3).map((arrival) => (
-          <div key={arrival.id} className="rounded-2xl border border-green-200 bg-green-50 p-4">
+          <div key={arrival.id} className="rounded-[1.5rem] border border-green-200 bg-green-50 p-4">
             <p className="text-sm font-semibold text-green-900">Next safe option</p>
             <p className="mt-1 text-lg font-bold text-green-900">
               {arrival.destination_name ?? trip.destinationStationName}
@@ -83,7 +89,7 @@ export function SavedTripCard({ trip }: SavedTripCardProps) {
         ))}
 
         {trip.wrongDirectionArrivals.slice(0, 2).map((arrival) => (
-          <div key={arrival.id} className="rounded-2xl border border-red-200 bg-red-50 p-4">
+          <div key={arrival.id} className="rounded-[1.5rem] border border-red-200 bg-red-50 p-4">
             <p className="text-sm font-semibold text-red-900">Wrong-direction train</p>
             <p className="mt-1 text-lg font-bold text-red-900">{arrival.destination_name ?? "Wrong direction"}</p>
             <p className="text-sm text-red-800">{formatArrival(arrival.minutes_away)}</p>

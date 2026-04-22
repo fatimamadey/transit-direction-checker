@@ -6,6 +6,7 @@ import type { DashboardData, DashboardTrip, LiveArrivalRow } from "@/types/dashb
 
 export function useLiveArrivals(initialData: DashboardData) {
   const [trips, setTrips] = useState<DashboardTrip[]>(initialData.trips);
+  const [isConnected, setIsConnected] = useState(false);
   const supabase = useSupabaseBrowserClient();
   const tripShapeRef = useRef(initialData.trips);
 
@@ -40,14 +41,19 @@ export function useLiveArrivals(initialData: DashboardData) {
           void refreshTripArrivals(tripIds, supabase, setTrips, tripShapeRef.current);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setIsConnected(status === "SUBSCRIBED");
+      });
 
     return () => {
       void supabase.removeChannel(channel);
     };
   }, [initialData.trips, supabase]);
 
-  return trips;
+  return {
+    trips,
+    isConnected
+  };
 }
 
 async function refreshTripArrivals(

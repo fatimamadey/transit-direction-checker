@@ -7,11 +7,14 @@ type SavedTripFormProps = {
 
 export function SavedTripForm({ stations }: SavedTripFormProps) {
   return (
-    <section className="rounded-[2rem] border border-[var(--border)] bg-white/90 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
-      <h2 className="text-2xl font-black text-slate-900">Save a trip</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        Pick the CTA station and direction that means “safe” for this trip.
-      </p>
+    <section className="rounded-[2.2rem] border border-[var(--border)] bg-[rgba(255,255,255,0.85)] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
+      <div className="rounded-[1.7rem] bg-[var(--sand)] p-4">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-900">Demo setup</p>
+        <h2 className="mt-2 text-3xl font-black text-slate-900">Save a trip</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">
+          Keep it tiny and practical. This app works best when the trip sounds like something you say out loud.
+        </p>
+      </div>
 
       <form action={createSavedTripAction} className="mt-6 space-y-4">
         <label className="block space-y-2">
@@ -83,8 +86,13 @@ export function SavedTripForm({ stations }: SavedTripFormProps) {
           </select>
         </label>
 
+        <div className="rounded-3xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-900">Try these labels</p>
+          <p className="mt-2 text-sm text-amber-900">Home to Campus. Campus to Home. Work commute. Late-night train.</p>
+        </div>
+
         <button
-          className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+          className="w-full rounded-full bg-[var(--ink)] px-5 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-slate-800"
           type="submit"
         >
           Save this trip

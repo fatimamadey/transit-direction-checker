@@ -48,3 +48,47 @@ export async function deleteSavedTripAction(savedTripId: string) {
 
   revalidatePath("/dashboard");
 }
+
+export async function seedDemoTripsAction() {
+  const supabase = getServiceRoleClient();
+
+  const { data: stations, error: stationsError } = await supabase
+    .from("cta_stations")
+    .select("id, map_id")
+    .in("map_id", ["41320", "41200", "40380", "40320"]);
+
+  if (stationsError || !stations) {
+    throw new Error(stationsError?.message ?? "Could not load CTA stations.");
+  }
+
+  const stationMap = new Map(stations.map((station) => [station.map_id, station.id]));
+
+  const demoTrips = [
+    {
+      clerk_user_id: DEMO_USER_ID,
+      label: "Belmont to Argyle",
+      origin_station_id: stationMap.get("41320"),
+      destination_station_id: stationMap.get("41200"),
+      route: "Red",
+      preferred_direction: "Northbound"
+    },
+    {
+      clerk_user_id: DEMO_USER_ID,
+      label: "UIC-Halsted to Clark/Lake",
+      origin_station_id: stationMap.get("40320"),
+      destination_station_id: stationMap.get("40380"),
+      route: "Blue",
+      preferred_direction: "Eastbound"
+    }
+  ].filter((trip) => trip.origin_station_id && trip.destination_station_id);
+
+  const { error } = await supabase.from("saved_trips").upsert(demoTrips, {
+    onConflict: "clerk_user_id,label"
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/dashboard");
+}

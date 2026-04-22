@@ -1,21 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f1e8;
-  --foreground: #1f2937;
-  --card: #fffaf2;
-  --muted: #6b7280;
-  --green-bg: #e6f7e8;
-  --green-text: #14532d;
+  --background: #f7f0e4;
+  --foreground: #1e293b;
+  --card: rgba(255, 250, 242, 0.88);
+  --muted: #667085;
+  --green-bg: #dcfce7;
+  --green-text: #166534;
   --red-bg: #fee2e2;
   --red-text: #991b1b;
-  --border: #e5dccf;
+  --border: rgba(140, 103, 67, 0.14);
+  --ink: #172033;
+  --sand: #fff5e7;
+  --sun: #f6b94c;
+}
+
+html {
+  font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
 }
 
 body {
   background:
-    radial-gradient(circle at top left, #fff9ec 0%, transparent 30%),
-    linear-gradient(180deg, #f6f1e8 0%, #f2ece1 100%);
+    radial-gradient(circle at top left, rgba(255, 245, 214, 0.95) 0%, transparent 28%),
+    radial-gradient(circle at top right, rgba(255, 221, 168, 0.7) 0%, transparent 22%),
+    linear-gradient(180deg, #fbf6ef 0%, #f4eadf 46%, #efe3d4 100%);
   color: var(--foreground);
   min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Arial Rounded MT Bold", "Avenir Next", "Trebuchet MS", sans-serif;
+  letter-spacing: -0.03em;
+}
+
+::selection {
+  background: rgba(246, 185, 76, 0.35);
 }
