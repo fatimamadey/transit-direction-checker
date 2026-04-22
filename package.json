@@ -2,6 +2,7 @@
   "name": "transit-direction-checker",
   "private": true,
   "version": "0.1.0",
+  "packageManager": "npm@10",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -10,6 +11,7 @@
     "dev:web": "npm run dev --workspace @take-this-one/web",
     "dev:worker": "npm run dev --workspace @take-this-one/worker",
     "build:web": "npm run build --workspace @take-this-one/web",
-    "build:worker": "npm run build --workspace @take-this-one/worker"
+    "build:worker": "npm run build --workspace @take-this-one/worker",
+    "start:worker": "npm run start --workspace @take-this-one/worker"
   }
 }

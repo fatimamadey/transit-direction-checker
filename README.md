@@ -103,43 +103,124 @@ npm run dev:worker
 
 ### Vercel
 
-Project root:
-- `apps/web`
+Per Vercel's monorepo flow, import the GitHub repo and set the project `Root Directory` to `apps/web`.
+
+Dashboard settings:
+
+- Framework Preset: `Next.js`
+- Root Directory: `apps/web`
+- Install Command: leave default
+- Build Command: leave default or set `npm run build`
+- Output Directory: leave default
 
 Environment variables:
+
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
-- `NEXT_PUBLIC_CLERK_SIGN_IN_URL`
-- `NEXT_PUBLIC_CLERK_SIGN_UP_URL`
-- `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL`
-- `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL`
+- `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`
+- `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up`
+- `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard`
+- `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Build command:
+Recommended production values:
 
-```bash
-npm run build
-```
+- `NEXT_PUBLIC_APP_URL=https://your-vercel-domain.vercel.app`
+- keep the Clerk route values exactly as listed above
+
+Clerk dashboard updates after Vercel deploy:
+
+- add your Vercel domain to Allowed Origins
+- add `https://your-vercel-domain.vercel.app/sign-in`
+- add `https://your-vercel-domain.vercel.app/sign-up`
+- set the app home URL to `https://your-vercel-domain.vercel.app`
+
+Supabase note:
+
+- `NEXT_PUBLIC_SUPABASE_URL` should be your project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` should be the anon public JWT key
+- `SUPABASE_SERVICE_ROLE_KEY` is used only on the server side by Next.js server actions
 
 ### Railway
 
-Project root:
-- `apps/worker`
+This repo is a shared `npm` workspace monorepo, so the safest Railway setup is to deploy from the repository root and use worker-specific root commands.
+
+Dashboard settings:
+
+- Source Repo: `fatimamadey/transit-direction-checker`
+- Root Directory: leave as `/`
+- Build Command: `npm run build:worker`
+- Start Command: `npm run start:worker`
+
+Recommended watch paths:
+
+- `/apps/worker/**`
+- `/packages/shared/**`
+- `/package.json`
+- `/package-lock.json`
 
 Environment variables:
+
+- `SUPABASE_PROJECT_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CTA_TRAIN_TRACKER_API_KEY`
+- `WORKER_POLL_INTERVAL_MS=60000`
+
+Recommended service name:
+
+- `take-this-one-worker`
+
+Why root deploy instead of `apps/worker`:
+
+- the worker depends on the local shared workspace package
+- deploying from the repo root lets Railway install workspace dependencies correctly
+
+### Current project values to copy into dashboards
+
+Use the values from your local env files. Do not commit them.
+
+For Vercel:
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+For Railway:
+
 - `SUPABASE_PROJECT_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `CTA_TRAIN_TRACKER_API_KEY`
 - `WORKER_POLL_INTERVAL_MS`
 
-Start command:
+### Supabase setup before first deploy
 
-```bash
-npm run start
-```
+Run these in the Supabase SQL editor:
+
+1. `supabase/schema.sql`
+2. `supabase/seed.sql`
+
+Then open:
+
+- Database -> Replication / Realtime
+
+Confirm `live_arrivals` is enabled for Realtime.
+
+### Clerk -> Supabase JWT template
+
+Create a Clerk JWT template named `supabase` with claims shaped for Supabase row access.
+
+Minimum claims:
+
+- `sub`: Clerk user id
+- `email`: user email
+- `role`: `authenticated`
+
+The browser client uses that template for Realtime subscriptions.
 
 ## Product Scope
 
