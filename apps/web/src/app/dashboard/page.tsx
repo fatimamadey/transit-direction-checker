@@ -14,13 +14,23 @@ export default async function DashboardPage() {
   }
 
   const user = await currentUser();
+  let dashboardData;
 
-  await syncProfileAction({
-    clerkUserId: userId,
-    email: user?.emailAddresses[0]?.emailAddress ?? "unknown@example.com"
-  });
+  try {
+    await syncProfileAction({
+      clerkUserId: userId,
+      email: user?.emailAddresses[0]?.emailAddress ?? "unknown@example.com"
+    });
 
-  const dashboardData = await getDashboardData(userId);
+    dashboardData = await getDashboardData(userId);
+  } catch (error) {
+    console.error("Dashboard failed to load:", error);
+
+    dashboardData = {
+      stations: [],
+      trips: []
+    };
+  }
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-10">
