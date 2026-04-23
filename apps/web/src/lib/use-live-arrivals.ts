@@ -17,6 +17,7 @@ export function useLiveArrivals(initialData: DashboardData) {
 
   useEffect(() => {
     if (!initialData.trips.length) {
+      setIsConnected(false);
       return;
     }
 

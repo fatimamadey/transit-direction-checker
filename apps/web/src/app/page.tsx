@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { userId } = await auth();
+
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-10">
       <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
@@ -34,12 +37,29 @@ export default function HomePage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-4">
-              <Link
-                className="rounded-full bg-[var(--ink)] px-6 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-slate-800"
-                href="/dashboard"
-              >
-                Open live demo
-              </Link>
+              {userId ? (
+                <Link
+                  className="rounded-full bg-[var(--ink)] px-6 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-slate-800"
+                  href="/dashboard"
+                >
+                  Open dashboard
+                </Link>
+              ) : (
+                <div className="flex flex-wrap gap-4">
+                  <Link
+                    className="rounded-full bg-[var(--ink)] px-6 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-slate-800"
+                    href="/sign-up"
+                  >
+                    Create account
+                  </Link>
+                  <Link
+                    className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400"
+                    href="/sign-in"
+                  >
+                    Sign in
+                  </Link>
+                </div>
+              )}
               <p className="self-center text-sm font-medium text-slate-600">
                 Chicago CTA only. Purposefully small.
               </p>

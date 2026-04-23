@@ -1,8 +1,8 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import type { DashboardData } from "@/types/dashboard";
 import { useLiveArrivals } from "@/lib/use-live-arrivals";
-import { DemoTripButton } from "./demo-trip-button";
 import { SavedTripCard } from "./saved-trip-card";
 import { SavedTripForm } from "./saved-trip-form";
 
@@ -46,6 +46,9 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
                 {safeCount} of {trips.length || 0} ready to board
               </p>
             </div>
+            <div className="flex justify-end pt-1">
+              <UserButton />
+            </div>
           </div>
         </div>
       </header>
@@ -62,9 +65,6 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
               <p className="mt-3 max-w-xl text-slate-600">
                 Add one simple favorite, like Campus to Home. The worker will check CTA for you and flag the right direction in green.
               </p>
-              <div className="mt-5">
-                <DemoTripButton />
-              </div>
             </div>
           )}
         </div>
