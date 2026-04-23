@@ -17,7 +17,8 @@ export default async function DashboardPage() {
 
   await syncProfileAction({
     clerkUserId: userId,
-    email: user?.emailAddresses[0]?.emailAddress ?? "unknown@example.com"
+    email: user?.emailAddresses[0]?.emailAddress ?? "unknown@example.com",
+    githubLogin: user?.username ?? null
   });
 
   const dashboardData = await getDashboardData(userId);

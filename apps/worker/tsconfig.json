@@ -8,10 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": "src",
-    "paths": {
-      "@take-this-one/shared": ["../../packages/shared/src"]
-    }
+    "rootDir": "src"
   },
   "include": ["src/**/*.ts"]
 }

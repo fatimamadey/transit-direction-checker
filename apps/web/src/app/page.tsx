@@ -12,28 +12,28 @@ export default async function HomePage() {
           <div className="absolute bottom-0 right-0 h-40 w-40 rounded-tl-[4rem] bg-[rgba(255,255,255,0.45)]" />
           <div className="relative space-y-7">
             <p className="inline-flex rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
-              Built for people who overthink platforms
+              Shared GitHub activity boards
             </p>
             <div className="space-y-4">
               <h1 className="max-w-3xl text-5xl font-black text-[var(--ink)] sm:text-7xl">
-                Take This One
+                Pulseboard
               </h1>
               <p className="max-w-2xl text-xl leading-8 text-slate-700">
-                Not a route planner. Not a map wall. Just one big, obvious answer before you board.
+                Join boards, track repositories and users, and watch commits, pull requests, and issues land in one shared feed.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-3xl bg-white/70 p-4">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Step 1</p>
-                <p className="mt-2 text-lg font-bold text-slate-900">Save your usual trip</p>
+                <p className="mt-2 text-lg font-bold text-slate-900">Create or join a board</p>
               </div>
               <div className="rounded-3xl bg-white/70 p-4">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Step 2</p>
-                <p className="mt-2 text-lg font-bold text-slate-900">Watch live CTA arrivals</p>
+                <p className="mt-2 text-lg font-bold text-slate-900">Add users or repos</p>
               </div>
               <div className="rounded-3xl bg-white/70 p-4">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Step 3</p>
-                <p className="mt-2 text-lg font-bold text-slate-900">Avoid the wrong train</p>
+                <p className="mt-2 text-lg font-bold text-slate-900">Watch the feed update</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-4">
@@ -61,7 +61,7 @@ export default async function HomePage() {
                 </div>
               )}
               <p className="self-center text-sm font-medium text-slate-600">
-                Chicago CTA only. Purposefully small.
+                Polling-based, no WebSockets, built for shared activity tracking.
               </p>
             </div>
           </div>
@@ -70,28 +70,28 @@ export default async function HomePage() {
         <section className="space-y-4 rounded-[2.5rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[0_35px_90px_rgba(15,23,42,0.08)]">
           <div className="rounded-[2rem] bg-[var(--green-bg)] p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--green-text)]">
-              RIGHT DIRECTION
+              FRESH ACTIVITY
             </p>
-            <h2 className="mt-2 text-4xl font-black text-[var(--green-text)]">Yes, take this one.</h2>
+            <h2 className="mt-2 text-4xl font-black text-[var(--green-text)]">New pull request opened.</h2>
             <p className="mt-3 text-base text-[var(--green-text)]">
-              Red Line toward Howard. Doors soon. No second guessing.
+              One feed, multiple GitHub sources, and a board everyone can watch together.
             </p>
           </div>
 
           <div className="rounded-[2rem] bg-[var(--red-bg)] p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--red-text)]">
-              WRONG DIRECTION
+              DESIGN RULE
             </p>
-            <h2 className="mt-2 text-4xl font-black text-[var(--red-text)]">Nope, not this one.</h2>
+            <h2 className="mt-2 text-4xl font-black text-[var(--red-text)]">Poll sources, not boards.</h2>
             <p className="mt-3 text-base text-[var(--red-text)]">
-              Wrong side of the platform. Next safe option arrives in 4 min.
+              Each GitHub user or repo is fetched once, then fanout happens in the database.
             </p>
           </div>
 
           <div className="rounded-[2rem] border border-dashed border-amber-300 bg-[var(--sand)] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-900">What this app is</p>
             <p className="mt-2 text-lg font-bold text-slate-900">
-              A wrong-direction prevention app for everyday trips.
+              A shared GitHub pulse board for classes, teams, and small communities.
             </p>
           </div>
         </section>

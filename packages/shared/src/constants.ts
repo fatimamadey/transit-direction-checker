@@ -1,8 +1,6 @@
-export const APP_NAME = "Take This One";
+export const APP_NAME = "Pulseboard";
 
-export const DIRECTION_OPTIONS = [
-  "Northbound",
-  "Southbound",
-  "Eastbound",
-  "Westbound"
-] as const;
+export const SOURCE_TYPES = ["user", "repo"] as const;
+
+export const DEFAULT_SOURCE_POLL_INTERVAL_SECONDS = 60;
+export const WORKER_TICK_MS = 5000;

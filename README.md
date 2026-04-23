@@ -1,14 +1,14 @@
-# Take This One
+# Pulseboard
 
-`Take This One` is a small full-stack transit app for people who only want one answer: am I about to board the right train?
+`Pulseboard` is a GitHub activity dashboard where users join public boards to watch live-ish GitHub events from selected users and repositories.
 
-The repo name is `transit-direction-checker`, but the product branding in the UI is `Take This One`.
+Recommended repo name: `github-activity-boards`
 
 ## Tech Stack
 
 - `apps/web`: Next.js App Router, Tailwind CSS, Clerk, Supabase
-- `apps/worker`: Node.js worker that polls CTA Train Tracker
-- `packages/shared`: shared types, station seeds, helpers
+- `apps/worker`: Node.js worker that polls the GitHub API
+- `packages/shared`: shared types and helpers
 - Supabase Postgres + Realtime
 - Vercel for the web app
 - Railway for the worker
@@ -64,7 +64,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 ```bash
 SUPABASE_PROJECT_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
-CTA_TRAIN_TRACKER_API_KEY=...
+GITHUB_TOKEN=...
 WORKER_POLL_INTERVAL_MS=60000
 ```
 
@@ -150,7 +150,7 @@ This repo is a shared `npm` workspace monorepo, so the safest Railway setup is t
 
 Dashboard settings:
 
-- Source Repo: `fatimamadey/transit-direction-checker`
+- Source Repo: `fatimamadey/github-activity-boards`
 - Root Directory: leave as `/`
 - Build Command: `npm run build:worker`
 - Start Command: `npm run start:worker`
@@ -166,7 +166,7 @@ Environment variables:
 
 - `SUPABASE_PROJECT_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `CTA_TRAIN_TRACKER_API_KEY`
+- `GITHUB_TOKEN`
 - `WORKER_POLL_INTERVAL_MS=60000`
 
 Recommended service name:
@@ -194,7 +194,7 @@ For Railway:
 
 - `SUPABASE_PROJECT_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `CTA_TRAIN_TRACKER_API_KEY`
+- `GITHUB_TOKEN`
 - `WORKER_POLL_INTERVAL_MS`
 
 ### Supabase setup before first deploy
@@ -208,7 +208,7 @@ Then open:
 
 - Database -> Replication / Realtime
 
-Confirm `live_arrivals` is enabled for Realtime.
+Confirm the new board feed tables are enabled for the polling/event flow once the GitHub dashboard schema replaces the old transit schema.
 
 ### Clerk -> Supabase JWT template
 
@@ -224,14 +224,14 @@ The browser client uses that template for Realtime subscriptions.
 
 ## Product Scope
 
-- CTA trains only
-- Small set of saved trips
-- No route planner
-- No map-first explorer
-- Friendly dashboard focused on direction mistakes
+- Public boards only
+- GitHub users and repositories as tracked sources
+- Polling-based live feed
+- No WebSockets
+- Shared board membership and source fanout
 
 ## Notes
 
 - The web app uses server actions for trip writes.
-- The worker writes trip-specific live arrival rows into Supabase.
-- Supabase Realtime pushes `live_arrivals` changes into the dashboard.
+- The worker polls deduplicated GitHub sources and fans new events out to boards.
+- The frontend polls our own board events API instead of using WebSockets.

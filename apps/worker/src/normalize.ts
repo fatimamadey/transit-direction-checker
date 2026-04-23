@@ -1,62 +1,92 @@
-export type NormalizedArrival = {
-  predictionId: string;
-  mapId: string;
-  route: string;
-  direction: string;
-  destinationName: string;
-  arrivalTime: string;
-  rawPayload: Record<string, unknown>;
+import type { SourceRecord } from "@take-this-one/shared";
+
+export type NormalizedGitHubEvent = {
+  githubEventId: string;
+  eventType: string;
+  actorLogin: string | null;
+  repoName: string | null;
+  subjectTitle: string | null;
+  subjectUrl: string | null;
+  occurredAt: string;
+  payload: Record<string, unknown>;
 };
 
-type CtaPrediction = {
-  prdt?: string;
-  arrT?: string;
-  rt?: string;
-  prdtid?: string;
-  destNm?: string;
-  trDr?: string;
-  mapid?: string;
+type GitHubActor = {
+  login?: string;
 };
 
-export function normalizeCtaResponse(payload: Record<string, unknown>): NormalizedArrival[] {
-  const arrivalsNode = payload?.["ctatt"] as { eta?: CtaPrediction[] } | undefined;
-  const predictions = arrivalsNode?.eta ?? [];
+type GitHubRepo = {
+  name?: string;
+};
 
-  return predictions
-    .filter((prediction) => prediction.prdtid && prediction.arrT && prediction.rt && prediction.trDr)
-    .map((prediction) => ({
-      predictionId: String(prediction.prdtid),
-      mapId: String(prediction.mapid ?? ""),
-      route: normalizeRouteName(String(prediction.rt)),
-      direction: normalizeDirectionCode(String(prediction.trDr)),
-      destinationName: String(prediction.destNm ?? "Unknown destination"),
-      arrivalTime: String(prediction.arrT),
-      rawPayload: prediction as Record<string, unknown>
-    }));
+type GitHubEventPayload = {
+  action?: string;
+  ref?: string;
+  commits?: Array<{ message?: string }>;
+  issue?: { title?: string; html_url?: string };
+  pull_request?: { title?: string; html_url?: string };
+  comment?: { html_url?: string };
+  release?: { name?: string; html_url?: string };
+};
+
+type GitHubEvent = {
+  id?: string;
+  type?: string;
+  actor?: GitHubActor;
+  repo?: GitHubRepo;
+  created_at?: string;
+  payload?: GitHubEventPayload;
+};
+
+export function normalizeGitHubEvent(
+  rawEvent: Record<string, unknown>,
+  source: SourceRecord
+): NormalizedGitHubEvent | null {
+  const event = rawEvent as GitHubEvent;
+
+  if (!event.id || !event.type || !event.created_at) {
+    return null;
+  }
+
+  return {
+    githubEventId: String(event.id),
+    eventType: String(event.type),
+    actorLogin: event.actor?.login ?? null,
+    repoName: event.repo?.name ?? (source.type === "repo" ? source.value : null),
+    subjectTitle: buildSubjectTitle(event),
+    subjectUrl: buildSubjectUrl(event),
+    occurredAt: String(event.created_at),
+    payload: rawEvent
+  };
 }
 
-export function normalizeDirectionCode(directionCode: string) {
-  switch (directionCode) {
-    case "1":
-      return "Northbound";
-    case "5":
-      return "Southbound";
+function buildSubjectTitle(event: GitHubEvent) {
+  switch (event.type) {
+    case "PushEvent":
+      return `${event.payload?.commits?.length ?? 0} commit${(event.payload?.commits?.length ?? 0) === 1 ? "" : "s"} pushed`;
+    case "PullRequestEvent":
+      return event.payload?.pull_request?.title ?? `${event.payload?.action ?? "updated"} pull request`;
+    case "IssuesEvent":
+      return event.payload?.issue?.title ?? `${event.payload?.action ?? "updated"} issue`;
+    case "IssueCommentEvent":
+      return `${event.payload?.action ?? "updated"} issue comment`;
+    case "ReleaseEvent":
+      return event.payload?.release?.name ?? "published release";
+    case "WatchEvent":
+      return "starred repository";
+    case "ForkEvent":
+      return "forked repository";
     default:
-      return directionCode;
+      return event.type ?? "GitHub event";
   }
 }
 
-function normalizeRouteName(routeCode: string) {
-  const map: Record<string, string> = {
-    Red: "Red",
-    Blue: "Blue",
-    Brn: "Brown",
-    G: "Green",
-    Org: "Orange",
-    P: "Purple",
-    Pink: "Pink",
-    Y: "Yellow"
-  };
-
-  return map[routeCode] ?? routeCode;
+function buildSubjectUrl(event: GitHubEvent) {
+  return (
+    event.payload?.pull_request?.html_url ??
+    event.payload?.issue?.html_url ??
+    event.payload?.comment?.html_url ??
+    event.payload?.release?.html_url ??
+    null
+  );
 }

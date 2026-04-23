@@ -1,96 +1,159 @@
-import { fetchPredictionsForMapId } from "./cta";
+import type { SourceRecord } from "@take-this-one/shared";
+import { pollGitHubSource } from "./github";
+import { normalizeGitHubEvent } from "./normalize";
 import { supabase } from "./db";
-
-type TripQueryRow = {
-  id: string;
-  route: string;
-  preferred_direction: string;
-  is_active: boolean;
-  origin_station: {
-    map_id: string;
-    stop_name: string;
-  } | null;
-};
+import { config } from "./config";
 
 export async function pollOnce() {
-  const { data: trips, error } = await supabase
-    .from("saved_trips")
-    .select(
-      `
-      *,
-      origin_station:cta_stations!saved_trips_origin_station_id_fkey(map_id, stop_name)
-    `
-    )
-    .eq("is_active", true);
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("sources")
+    .select("*")
+    .lte("next_poll_at", now)
+    .order("next_poll_at", { ascending: true })
+    .limit(config.sourceBatchSize);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const typedTrips = (trips ?? []) as TripQueryRow[];
+  const sources = (data ?? []) as SourceRecord[];
 
-  if (!typedTrips.length) {
-    console.log("No active trips found.");
+  if (!sources.length) {
+    console.log("No due sources found.");
     return;
   }
 
-  const tripsByMapId = new Map<string, TripQueryRow[]>();
-
-  for (const trip of typedTrips) {
-    const mapId = trip.origin_station?.map_id;
-
-    if (!mapId) {
-      continue;
-    }
-
-    const current = tripsByMapId.get(mapId) ?? [];
-    current.push(trip);
-    tripsByMapId.set(mapId, current);
-  }
-
-  for (const [mapId, tripsForStation] of tripsByMapId.entries()) {
-    try {
-      const predictions = await fetchPredictionsForMapId(mapId);
-
-      for (const trip of tripsForStation) {
-        const tripPredictions = predictions.filter((prediction) => prediction.route === trip.route);
-        const payload = tripPredictions.map((prediction) => {
-          const isRightDirection = prediction.direction === trip.preferred_direction;
-          const minutesAway = getMinutesAway(prediction.arrivalTime);
-
-          return {
-            saved_trip_id: trip.id,
-            cta_prediction_id: prediction.predictionId,
-            route: prediction.route,
-            destination_name: prediction.destinationName,
-            direction: prediction.direction,
-            arrival_time: prediction.arrivalTime,
-            minutes_away: minutesAway,
-            is_right_direction: isRightDirection,
-            status_label: isRightDirection ? "RIGHT DIRECTION" : "WRONG DIRECTION",
-            status_message: isRightDirection ? "Yes, take this one." : "Nope, not this one.",
-            raw_payload: prediction.rawPayload,
-            last_updated: new Date().toISOString()
-          };
-        });
-
-        await supabase.from("live_arrivals").delete().eq("saved_trip_id", trip.id);
-
-        if (payload.length > 0) {
-          const { error: insertError } = await supabase.from("live_arrivals").insert(payload);
-
-          if (insertError) {
-            console.error(`Failed to write live arrivals for trip ${trip.id}:`, insertError.message);
-          }
-        }
-      }
-    } catch (stationError) {
-      console.error(`Polling failed for map id ${mapId}:`, stationError);
-    }
+  for (const source of sources) {
+    await pollSource(source);
   }
 }
 
-function getMinutesAway(arrivalTime: string) {
-  const msUntilArrival = new Date(arrivalTime).getTime() - Date.now();
-  return Math.max(0, Math.round(msUntilArrival / 60000));
+async function pollSource(source: SourceRecord) {
+  try {
+    const result = await pollGitHubSource(source);
+
+    if (result.kind === "not_modified") {
+      await updateSourceAfterPoll(source.id, {
+        last_polled_at: new Date().toISOString(),
+        next_poll_at: nextPollTime(result.pollIntervalSeconds),
+        poll_interval_seconds: result.pollIntervalSeconds,
+        last_status_code: result.status,
+        last_error: null
+      });
+      return;
+    }
+
+    const boardIds = await getBoardIdsForSource(source.id);
+
+    for (const rawEvent of result.events) {
+      const normalized = normalizeGitHubEvent(rawEvent, source);
+
+      if (!normalized) {
+        continue;
+      }
+
+      const eventId = await upsertEvent(source.id, normalized);
+
+      if (!eventId || !boardIds.length) {
+        continue;
+      }
+
+      const fanoutRows = boardIds.map((boardId) => ({
+        board_id: boardId,
+        event_id: eventId,
+        source_id: source.id
+      }));
+
+      const { error: boardEventsError } = await supabase
+        .from("board_events")
+        .upsert(fanoutRows, { onConflict: "board_id,event_id" });
+
+      if (boardEventsError) {
+        console.error(`Failed to attach events to boards for source ${source.value}:`, boardEventsError.message);
+      }
+    }
+
+    await updateSourceAfterPoll(source.id, {
+      last_etag: result.etag,
+      last_polled_at: new Date().toISOString(),
+      next_poll_at: nextPollTime(result.pollIntervalSeconds),
+      poll_interval_seconds: result.pollIntervalSeconds,
+      last_status_code: result.status,
+      last_error: null
+    });
+  } catch (error) {
+    console.error(`Polling failed for source ${source.type}:${source.value}:`, error);
+
+    await updateSourceAfterPoll(source.id, {
+      last_polled_at: new Date().toISOString(),
+      next_poll_at: nextPollTime(Math.max(source.poll_interval_seconds, 120)),
+      last_status_code: 500,
+      last_error: error instanceof Error ? error.message : "Unknown worker error"
+    });
+  }
+}
+
+async function getBoardIdsForSource(sourceId: string) {
+  const { data, error } = await supabase.from("board_sources").select("board_id").eq("source_id", sourceId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => row.board_id as string);
+}
+
+async function upsertEvent(
+  sourceId: string,
+  normalized: {
+    githubEventId: string;
+    eventType: string;
+    actorLogin: string | null;
+    repoName: string | null;
+    subjectTitle: string | null;
+    subjectUrl: string | null;
+    occurredAt: string;
+    payload: Record<string, unknown>;
+  }
+) {
+  const { data, error } = await supabase
+    .from("events")
+    .upsert(
+      {
+        github_event_id: normalized.githubEventId,
+        source_id: sourceId,
+        event_type: normalized.eventType,
+        actor_login: normalized.actorLogin,
+        repo_name: normalized.repoName,
+        subject_title: normalized.subjectTitle,
+        subject_url: normalized.subjectUrl,
+        occurred_at: normalized.occurredAt,
+        payload: normalized.payload
+      },
+      {
+        onConflict: "github_event_id"
+      }
+    )
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error(`Failed to upsert GitHub event ${normalized.githubEventId}:`, error.message);
+    return null;
+  }
+
+  return data.id as string;
+}
+
+async function updateSourceAfterPoll(sourceId: string, values: Record<string, unknown>) {
+  const { error } = await supabase.from("sources").update(values).eq("id", sourceId);
+
+  if (error) {
+    console.error(`Failed to update source ${sourceId}:`, error.message);
+  }
+}
+
+function nextPollTime(intervalSeconds: number) {
+  return new Date(Date.now() + intervalSeconds * 1000).toISOString();
 }

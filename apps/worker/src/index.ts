@@ -2,12 +2,12 @@ import { config } from "./config";
 import { pollOnce } from "./poller";
 
 async function main() {
-  console.log("Take This One worker started.");
+  console.log("Pulseboard worker started.");
   await pollOnce();
 
   setInterval(() => {
     void pollOnce();
-  }, config.pollIntervalMs);
+  }, config.workerTickMs);
 }
 
 void main().catch((error) => {

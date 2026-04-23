@@ -3,8 +3,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Take This One",
-  description: "A transit app that helps you avoid boarding the wrong train."
+  title: "Pulseboard",
+  description: "A GitHub activity dashboard for shared boards and polling-based live feeds."
 };
 
 export default function RootLayout({

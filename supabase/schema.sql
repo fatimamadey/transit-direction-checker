@@ -1,145 +1,136 @@
 create extension if not exists pgcrypto;
 
-create table if not exists profiles (
+create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   clerk_user_id text not null unique,
   email text not null unique,
+  github_login text,
   created_at timestamptz not null default now()
 );
 
-create table if not exists cta_stations (
+create table if not exists boards (
   id uuid primary key default gen_random_uuid(),
-  map_id text not null unique,
-  stop_name text not null,
-  lines text[] not null default '{}',
-  directions text[] not null default '{}',
-  display_order integer not null default 0,
-  is_active boolean not null default true,
+  slug text not null unique,
+  name text not null,
+  description text,
+  created_by_user_id uuid not null references users(id) on delete cascade,
   created_at timestamptz not null default now()
 );
 
-create table if not exists saved_trips (
+create table if not exists board_members (
   id uuid primary key default gen_random_uuid(),
-  clerk_user_id text not null,
-  label text not null,
-  origin_station_id uuid not null references cta_stations(id),
-  destination_station_id uuid not null references cta_stations(id),
-  route text not null,
-  preferred_direction text not null check (preferred_direction in ('Northbound', 'Southbound', 'Eastbound', 'Westbound')),
-  is_active boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (clerk_user_id, label),
-  check (origin_station_id <> destination_station_id)
+  board_id uuid not null references boards(id) on delete cascade,
+  user_id uuid not null references users(id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  unique (board_id, user_id)
 );
 
-create table if not exists live_arrivals (
+create table if not exists sources (
   id uuid primary key default gen_random_uuid(),
-  saved_trip_id uuid not null references saved_trips(id) on delete cascade,
-  cta_prediction_id text not null,
-  route text not null,
-  destination_name text,
-  direction text not null,
-  arrival_time timestamptz not null,
-  minutes_away integer not null,
-  is_right_direction boolean not null,
-  status_label text not null check (status_label in ('RIGHT DIRECTION', 'WRONG DIRECTION')),
-  status_message text not null,
-  raw_payload jsonb not null default '{}'::jsonb,
-  last_updated timestamptz not null default now(),
+  type text not null check (type in ('user', 'repo')),
+  value text not null,
+  display_name text not null,
+  last_etag text,
+  last_polled_at timestamptz,
+  next_poll_at timestamptz not null default now(),
+  poll_interval_seconds integer not null default 60,
+  last_status_code integer,
+  last_error text,
   created_at timestamptz not null default now(),
-  unique (saved_trip_id, cta_prediction_id)
+  unique (type, value)
 );
 
-create index if not exists live_arrivals_saved_trip_id_arrival_time_idx
-  on live_arrivals (saved_trip_id, arrival_time);
+create table if not exists board_sources (
+  id uuid primary key default gen_random_uuid(),
+  board_id uuid not null references boards(id) on delete cascade,
+  source_id uuid not null references sources(id) on delete cascade,
+  added_by_user_id uuid not null references users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (board_id, source_id)
+);
 
-create index if not exists live_arrivals_last_updated_idx
-  on live_arrivals (last_updated desc);
+create table if not exists events (
+  id uuid primary key default gen_random_uuid(),
+  github_event_id text not null unique,
+  source_id uuid not null references sources(id) on delete cascade,
+  event_type text not null,
+  actor_login text,
+  repo_name text,
+  subject_title text,
+  subject_url text,
+  occurred_at timestamptz not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
 
-create or replace function update_updated_at_column()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
+create table if not exists board_events (
+  id uuid primary key default gen_random_uuid(),
+  board_id uuid not null references boards(id) on delete cascade,
+  event_id uuid not null references events(id) on delete cascade,
+  source_id uuid not null references sources(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (board_id, event_id)
+);
 
-drop trigger if exists set_saved_trips_updated_at on saved_trips;
-create trigger set_saved_trips_updated_at
-before update on saved_trips
-for each row
-execute function update_updated_at_column();
+create index if not exists boards_slug_idx on boards (slug);
+create index if not exists board_members_user_id_board_id_idx on board_members (user_id, board_id);
+create index if not exists board_sources_board_id_source_id_idx on board_sources (board_id, source_id);
+create index if not exists sources_type_value_idx on sources (type, value);
+create index if not exists sources_next_poll_at_idx on sources (next_poll_at);
+create index if not exists events_source_id_occurred_at_idx on events (source_id, occurred_at desc);
+create index if not exists board_events_board_id_created_at_idx on board_events (board_id, created_at desc);
+create index if not exists board_events_event_id_idx on board_events (event_id);
 
-alter table profiles enable row level security;
-alter table cta_stations enable row level security;
-alter table saved_trips enable row level security;
-alter table live_arrivals enable row level security;
+alter table users enable row level security;
+alter table boards enable row level security;
+alter table board_members enable row level security;
+alter table sources enable row level security;
+alter table board_sources enable row level security;
+alter table events enable row level security;
+alter table board_events enable row level security;
 
-create policy "profiles_select_own"
-on profiles
+create policy "users_select_own"
+on users
 for select
 using ((auth.jwt() ->> 'sub') = clerk_user_id);
 
-create policy "profiles_insert_own"
-on profiles
+create policy "users_insert_own"
+on users
 for insert
 with check ((auth.jwt() ->> 'sub') = clerk_user_id);
 
-create policy "profiles_update_own"
-on profiles
+create policy "users_update_own"
+on users
 for update
 using ((auth.jwt() ->> 'sub') = clerk_user_id)
 with check ((auth.jwt() ->> 'sub') = clerk_user_id);
 
-create policy "stations_read_authenticated"
-on cta_stations
+create policy "boards_public_read"
+on boards
 for select
-using ((auth.jwt() ->> 'role') = 'authenticated');
+using (true);
 
-create policy "saved_trips_select_own"
-on saved_trips
+create policy "board_members_read_public"
+on board_members
 for select
-using ((auth.jwt() ->> 'sub') = clerk_user_id);
+using (true);
 
-create policy "saved_trips_insert_own"
-on saved_trips
-for insert
-with check ((auth.jwt() ->> 'sub') = clerk_user_id);
-
-create policy "saved_trips_update_own"
-on saved_trips
-for update
-using ((auth.jwt() ->> 'sub') = clerk_user_id)
-with check ((auth.jwt() ->> 'sub') = clerk_user_id);
-
-create policy "saved_trips_delete_own"
-on saved_trips
-for delete
-using ((auth.jwt() ->> 'sub') = clerk_user_id);
-
-create policy "live_arrivals_read_own_trip"
-on live_arrivals
+create policy "sources_public_read"
+on sources
 for select
-using (
-  exists (
-    select 1
-    from saved_trips
-    where saved_trips.id = live_arrivals.saved_trip_id
-      and saved_trips.clerk_user_id = (auth.jwt() ->> 'sub')
-  )
-);
+using (true);
 
-create policy "live_arrivals_read_demo_trip_public"
-on live_arrivals
+create policy "board_sources_public_read"
+on board_sources
 for select
-using (
-  exists (
-    select 1
-    from saved_trips
-    where saved_trips.id = live_arrivals.saved_trip_id
-      and saved_trips.clerk_user_id = 'demo-user'
-  )
-);
+using (true);
 
-alter publication supabase_realtime add table live_arrivals;
+create policy "events_public_read"
+on events
+for select
+using (true);
+
+create policy "board_events_public_read"
+on board_events
+for select
+using (true);
