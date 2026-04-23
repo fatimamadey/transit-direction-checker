@@ -16,7 +16,7 @@ export function useLiveArrivals(initialData: DashboardData) {
   }, [initialData]);
 
   useEffect(() => {
-    if (!initialData.trips.length) {
+    if (!supabase || !initialData.trips.length) {
       setIsConnected(false);
       return;
     }
@@ -59,7 +59,7 @@ export function useLiveArrivals(initialData: DashboardData) {
 
 async function refreshTripArrivals(
   tripIds: string[],
-  supabase: ReturnType<typeof useSupabaseBrowserClient>,
+  supabase: NonNullable<ReturnType<typeof useSupabaseBrowserClient>>,
   setTrips: React.Dispatch<React.SetStateAction<DashboardTrip[]>>,
   tripShape: DashboardTrip[]
 ) {

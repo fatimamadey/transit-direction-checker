@@ -1,16 +1,17 @@
-function requirePublicEnv(name: string) {
-  const value = process.env[name];
+export function getPublicEnv() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
+  if (!supabaseUrl) {
+    throw new Error("Missing environment variable: NEXT_PUBLIC_SUPABASE_URL");
   }
 
-  return value;
-}
+  if (!supabaseAnonKey) {
+    throw new Error("Missing environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
 
-export function getPublicEnv() {
   return {
-    supabaseUrl: requirePublicEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    supabaseAnonKey: requirePublicEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    supabaseUrl,
+    supabaseAnonKey
   };
 }

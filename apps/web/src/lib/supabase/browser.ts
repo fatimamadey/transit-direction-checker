@@ -9,6 +9,10 @@ export function useSupabaseBrowserClient() {
   const { getToken } = useAuth();
   const clientRef = useRef<ReturnType<typeof createClient> | null>(null);
 
+  if (typeof window === "undefined") {
+    return null;
+  }
+
   if (!clientRef.current) {
     const publicEnv = getPublicEnv();
 
