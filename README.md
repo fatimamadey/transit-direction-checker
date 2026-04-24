@@ -1,33 +1,26 @@
 # Pulseboard
 
-`Pulseboard` is a GitHub activity dashboard where users join public boards to watch live-ish GitHub events from selected users and repositories.
+`Pulseboard` is a GitHub activity dashboard where people join public boards and watch GitHub events as a visual pulse instead of a plain feed. Boards aggregate activity from tracked GitHub users and repositories. The frontend polls our own API, and the worker polls GitHub sources with ETags and fanout.
 
-Recommended repo name: `github-activity-boards`
+## Stack
 
-## Tech Stack
-
-- `apps/web`: Next.js App Router, Tailwind CSS, Clerk, Supabase
-- `apps/worker`: Node.js worker that polls the GitHub API
-- `packages/shared`: shared types and helpers
-- Supabase Postgres + Realtime
+- `apps/web`: Next.js App Router, Tailwind CSS, Clerk, Recharts, Supabase
+- `apps/worker`: Node.js worker running on Railway
+- `packages/shared`: shared helpers and types
+- Supabase Postgres
 - Vercel for the web app
 - Railway for the worker
 
-## Monorepo Structure
+## Product shape
 
-```text
-.
-├─ apps/
-│  ├─ web
-│  └─ worker
-├─ packages/
-│  └─ shared
-└─ supabase/
-   ├─ schema.sql
-   └─ seed.sql
-```
+- Public boards only
+- Users can create boards, join boards, and add tracked sources
+- Sources are globally deduplicated by `type + value`
+- Worker polls GitHub sources, not boards
+- Browser polls board snapshots every ~5 seconds
+- UI uses a dark Radical-inspired control-room aesthetic with charts, source orbit visuals, and an animated live ticker
 
-## Local Setup
+## Local setup
 
 ### 1. Install dependencies
 
@@ -37,14 +30,12 @@ npm install
 
 ### 2. Create env files
 
-Copy the root `.env.example` values into:
+Create:
 
 - `apps/web/.env.local`
 - `apps/worker/.env.local`
 
-Recommended split:
-
-`apps/web/.env.local`
+Suggested web env:
 
 ```bash
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -59,7 +50,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ```
 
-`apps/worker/.env.local`
+Suggested worker env:
 
 ```bash
 SUPABASE_PROJECT_URL=...
@@ -68,52 +59,87 @@ GITHUB_TOKEN=...
 WORKER_POLL_INTERVAL_MS=60000
 ```
 
-### 3. Configure Clerk -> Supabase JWT
-
-Create a Clerk JWT template named `supabase`.
-
-Use:
-
-- `sub` = Clerk user id
-- `email` = user email
-- `role` = `authenticated`
-
-Then the browser Supabase client can subscribe to Realtime using the Clerk-issued JWT.
-
-### 4. Run SQL in Supabase
+### 3. Configure Supabase
 
 Run:
 
 1. `supabase/schema.sql`
 2. `supabase/seed.sql`
 
-### 5. Start local dev
+### 4. Configure Clerk
+
+Use Clerk for auth and allow the providers you want, currently Google and GitHub.
+
+If you want Supabase Realtime later, create a Clerk JWT template named `supabase` with:
+
+- `sub` = Clerk user id
+- `email` = user email
+- `role` = `authenticated`
+
+The current board UI uses polling, so that JWT template is not required for the main redesigned flow.
+
+### 5. Run locally
+
+Web:
 
 ```bash
 npm run dev:web
 ```
 
-In another terminal:
+Worker:
 
 ```bash
 npm run dev:worker
 ```
 
+Build checks:
+
+```bash
+npm run build:web
+npm run build:worker
+```
+
+## Data flow
+
+```text
+GitHub Events API
+  -> worker tick
+  -> poll due sources with ETag / X-Poll-Interval
+  -> normalize and store global events
+  -> fan out into board_events
+  -> web API routes
+  -> browser polling on board pages
+  -> charts, orbit view, live ticker
+```
+
+## Important routes
+
+- `GET /api/boards`
+  - public board discovery
+- `POST /api/boards`
+  - create a new board
+- `POST /api/boards/[slug]/join`
+  - join a public board
+- `POST /api/boards/[slug]/sources`
+  - add a tracked GitHub user or repo
+- `GET /api/boards/[slug]/snapshot?since=timestamp`
+  - returns:
+    - new events since cursor
+    - board summary
+    - timeline buckets
+    - source node activity
+    - `serverTime`
+
 ## Deploy
 
 ### Vercel
 
-Per Vercel's monorepo flow, import the GitHub repo and set the project `Root Directory` to `apps/web`.
+Import the repo and set:
 
-Dashboard settings:
-
-- Framework Preset: `Next.js`
 - Root Directory: `apps/web`
-- Install Command: leave default
-- Build Command: leave default or set `npm run build`
-- Output Directory: leave default
+- Framework Preset: `Next.js`
 
-Environment variables:
+Set these env vars:
 
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
@@ -126,112 +152,22 @@ Environment variables:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Recommended production values:
-
-- `NEXT_PUBLIC_APP_URL=https://your-vercel-domain.vercel.app`
-- keep the Clerk route values exactly as listed above
-
-Clerk dashboard updates after Vercel deploy:
-
-- add your Vercel domain to Allowed Origins
-- add `https://your-vercel-domain.vercel.app/sign-in`
-- add `https://your-vercel-domain.vercel.app/sign-up`
-- set the app home URL to `https://your-vercel-domain.vercel.app`
-
-Supabase note:
-
-- `NEXT_PUBLIC_SUPABASE_URL` should be your project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` should be the anon public JWT key
-- `SUPABASE_SERVICE_ROLE_KEY` is used only on the server side by Next.js server actions
-
 ### Railway
 
-This repo is a shared `npm` workspace monorepo, so the safest Railway setup is to deploy from the repository root and use worker-specific root commands.
+Deploy from the repo root.
 
-Dashboard settings:
-
-- Source Repo: `fatimamadey/github-activity-boards`
-- Root Directory: leave as `/`
 - Build Command: `npm run build:worker`
 - Start Command: `npm run start:worker`
 
-Recommended watch paths:
-
-- `/apps/worker/**`
-- `/packages/shared/**`
-- `/package.json`
-- `/package-lock.json`
-
-Environment variables:
+Set these env vars:
 
 - `SUPABASE_PROJECT_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GITHUB_TOKEN`
 - `WORKER_POLL_INTERVAL_MS=60000`
 
-Recommended service name:
-
-- `take-this-one-worker`
-
-Why root deploy instead of `apps/worker`:
-
-- the worker depends on the local shared workspace package
-- deploying from the repo root lets Railway install workspace dependencies correctly
-
-### Current project values to copy into dashboards
-
-Use the values from your local env files. Do not commit them.
-
-For Vercel:
-
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-
-For Railway:
-
-- `SUPABASE_PROJECT_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `GITHUB_TOKEN`
-- `WORKER_POLL_INTERVAL_MS`
-
-### Supabase setup before first deploy
-
-Run these in the Supabase SQL editor:
-
-1. `supabase/schema.sql`
-2. `supabase/seed.sql`
-
-Then open:
-
-- Database -> Replication / Realtime
-
-Confirm the new board feed tables are enabled for the polling/event flow once the GitHub dashboard schema replaces the old transit schema.
-
-### Clerk -> Supabase JWT template
-
-Create a Clerk JWT template named `supabase` with claims shaped for Supabase row access.
-
-Minimum claims:
-
-- `sub`: Clerk user id
-- `email`: user email
-- `role`: `authenticated`
-
-The browser client uses that template for Realtime subscriptions.
-
-## Product Scope
-
-- Public boards only
-- GitHub users and repositories as tracked sources
-- Polling-based live feed
-- No WebSockets
-- Shared board membership and source fanout
-
 ## Notes
 
-- The web app uses server actions for trip writes.
-- The worker polls deduplicated GitHub sources and fans new events out to boards.
-- The frontend polls our own board events API instead of using WebSockets.
+- `Recharts` is used for the quantitative dashboard visuals.
+- Custom SVG + Tailwind motion is used for source orbit and ticker-style UI.
+- GitHub activity is not truly real-time, so the UI should feel live without pretending the source is instantaneous.

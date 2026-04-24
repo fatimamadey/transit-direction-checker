@@ -1,16 +1,29 @@
-export type BoardListItem = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  memberCount: number;
-  sourceCount: number;
-  joined: boolean;
+export type EventKind = "push" | "pull_request" | "issue" | "comment" | "release" | "watch" | "fork" | "other";
+
+export type MetricPoint = {
+  label: string;
+  value: number;
 };
 
-export type DashboardData = {
-  joinedBoards: BoardListItem[];
-  publicBoards: BoardListItem[];
+export type ActivityBucket = {
+  label: string;
+  bucketStart: string;
+  total: number;
+  push: number;
+  pull_request: number;
+  issue: number;
+  comment: number;
+  release: number;
+  watch: number;
+  fork: number;
+  other: number;
+};
+
+export type EventMixItem = {
+  kind: EventKind;
+  label: string;
+  count: number;
+  share: number;
 };
 
 export type BoardSource = {
@@ -20,10 +33,22 @@ export type BoardSource = {
   displayName: string;
 };
 
+export type SourceNode = BoardSource & {
+  activityCount: number;
+  latestEventAt: string | null;
+  pulseScore: number;
+};
+
+export type TopActor = {
+  login: string;
+  count: number;
+};
+
 export type BoardEvent = {
   id: string;
   githubEventId: string;
   eventType: string;
+  eventKind: EventKind;
   actorLogin: string | null;
   repoName: string | null;
   subjectTitle: string | null;
@@ -31,6 +56,43 @@ export type BoardEvent = {
   occurredAt: string;
   boardEventCreatedAt: string;
   source: BoardSource;
+};
+
+export type BoardSummary = {
+  totalEvents: number;
+  recentEvents: number;
+  liveSources: number;
+  uniqueActors: number;
+  latestEventAt: string | null;
+  mix: EventMixItem[];
+};
+
+export type BoardListItem = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  memberCount: number;
+  sourceCount: number;
+  joined: boolean;
+  summary: BoardSummary;
+  timeline: ActivityBucket[];
+};
+
+export type DashboardOverview = {
+  totalBoards: number;
+  joinedBoards: number;
+  trackedSources: number;
+  liveEvents24h: number;
+  skyline: ActivityBucket[];
+  actorLeaders: TopActor[];
+  eventMix: EventMixItem[];
+};
+
+export type DashboardData = {
+  overview: DashboardOverview;
+  joinedBoards: BoardListItem[];
+  publicBoards: BoardListItem[];
 };
 
 export type BoardPageData = {
@@ -44,5 +106,17 @@ export type BoardPageData = {
   };
   isMember: boolean;
   sources: BoardSource[];
+  sourceNodes: SourceNode[];
+  summary: BoardSummary;
+  timelineBuckets: ActivityBucket[];
+  topActors: TopActor[];
   initialEvents: BoardEvent[];
+};
+
+export type BoardSnapshot = {
+  events: BoardEvent[];
+  summary: BoardSummary;
+  timelineBuckets: ActivityBucket[];
+  sourceNodes: SourceNode[];
+  serverTime: string;
 };

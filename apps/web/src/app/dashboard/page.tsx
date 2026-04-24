@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   const dashboardData = await getDashboardData(userId);
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-6 py-10">
+    <main className="mx-auto min-h-screen max-w-[1500px] px-4 py-4 sm:px-6 lg:px-8">
       <DashboardShell
         dashboardData={dashboardData}
         userName={user?.firstName ?? user?.username ?? "friend"}

@@ -1,5 +1,31 @@
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
-import type { BoardEvent, BoardListItem, BoardPageData, DashboardData } from "@/types/dashboard";
+import type {
+  ActivityBucket,
+  BoardEvent,
+  BoardListItem,
+  BoardPageData,
+  BoardSnapshot,
+  BoardSource,
+  BoardSummary,
+  DashboardData,
+  DashboardOverview,
+  EventKind,
+  EventMixItem,
+  SourceNode,
+  TopActor
+} from "@/types/dashboard";
+
+const DASHBOARD_WINDOW_HOURS = 24;
+const BOARD_WINDOW_HOURS = 24;
+const DASHBOARD_BUCKETS = 8;
+const BOARD_BUCKETS = 10;
+
+type BoardRecord = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+};
 
 export async function getDashboardData(clerkUserId: string): Promise<DashboardData> {
   const supabase = getServiceRoleClient();
@@ -18,72 +44,106 @@ export async function getDashboardData(clerkUserId: string): Promise<DashboardDa
     throw new Error(membershipsError.message);
   }
 
-  const boardIds = (boards ?? []).map((board) => board.id as string);
+  const boardRows = ((boards ?? []) as Record<string, unknown>[]).map((board) => ({
+    id: String(board.id),
+    slug: String(board.slug),
+    name: String(board.name),
+    description: (board.description as string | null) ?? null
+  }));
+
+  const boardIds = boardRows.map((board) => board.id);
   const joinedSet = new Set((memberships ?? []).map((membership) => membership.board_id as string));
   const counts = boardIds.length ? await getBoardCounts(boardIds) : new Map<string, { members: number; sources: number }>();
+  const recentEvents = boardIds.length ? await getBoardEventsForBoards(boardIds, DASHBOARD_WINDOW_HOURS) : [];
+  const groupedEvents = groupEventsByBoard(recentEvents);
+  const trackedSources = countTrackedSources(counts, boardIds);
 
-  const boardList = (boards ?? []).map((board) =>
-    toBoardListItem(
-      board.id as string,
-      board.slug as string,
-      board.name as string,
-      (board.description as string | null) ?? null,
-      joinedSet.has(board.id as string),
-      counts
-    )
+  const boardList = boardRows.map((board) =>
+    toBoardListItem(board, joinedSet.has(board.id), counts, groupedEvents.get(board.id) ?? [])
   );
 
   return {
+    overview: buildDashboardOverview(boardList, recentEvents, trackedSources),
     joinedBoards: boardList.filter((board) => board.joined),
     publicBoards: boardList
   };
 }
 
 export async function getBoardPageData(slug: string, clerkUserId: string | null): Promise<BoardPageData> {
+  const board = await getBoardBySlug(slug);
+  const counts = await getBoardCounts([board.id]);
+  const sources = await getBoardSources(board.id);
+  const initialEvents = await getBoardEvents(board.id, null, 20);
+  const recentEvents = await getBoardEvents(board.id, null, 90, BOARD_WINDOW_HOURS);
+  const isMember = clerkUserId ? await isBoardMember(clerkUserId, board.id) : false;
+
+  return {
+    board: {
+      id: board.id,
+      slug: board.slug,
+      name: board.name,
+      description: board.description,
+      memberCount: counts.get(board.id)?.members ?? 0,
+      sourceCount: counts.get(board.id)?.sources ?? 0
+    },
+    isMember,
+    sources,
+    sourceNodes: buildSourceNodes(sources, recentEvents),
+    summary: buildBoardSummary(recentEvents, sources.length),
+    timelineBuckets: buildActivityBuckets(recentEvents, BOARD_WINDOW_HOURS, BOARD_BUCKETS),
+    topActors: buildTopActors(recentEvents, 5),
+    initialEvents
+  };
+}
+
+export async function getBoardSnapshotBySlug(slug: string, since: string | null): Promise<BoardSnapshot> {
+  const board = await getBoardBySlug(slug);
+  const sources = await getBoardSources(board.id);
+  const [events, recentEvents] = await Promise.all([
+    getBoardEvents(board.id, since, 40),
+    getBoardEvents(board.id, null, 90, BOARD_WINDOW_HOURS)
+  ]);
+
+  return {
+    events: events.reverse(),
+    summary: buildBoardSummary(recentEvents, sources.length),
+    timelineBuckets: buildActivityBuckets(recentEvents, BOARD_WINDOW_HOURS, BOARD_BUCKETS),
+    sourceNodes: buildSourceNodes(sources, recentEvents),
+    serverTime: new Date().toISOString()
+  };
+}
+
+export async function getBoardEventsBySlug(slug: string, since: string | null, limit = 50) {
+  const board = await getBoardBySlug(slug);
+  return getBoardEvents(board.id, since, limit);
+}
+
+async function getBoardBySlug(slug: string): Promise<BoardRecord> {
   const supabase = getServiceRoleClient();
-  const { data: board, error: boardError } = await supabase
+  const { data: board, error } = await supabase
     .from("boards")
     .select("id, slug, name, description")
     .eq("slug", slug)
     .single();
 
-  if (boardError || !board) {
-    throw new Error(boardError?.message ?? "Board not found.");
-  }
-
-  const boardId = board.id as string;
-  const counts = await getBoardCounts([boardId]);
-  const sources = await getBoardSources(boardId);
-  const initialEvents = await getBoardEvents(boardId, null, 30);
-  const isMember = clerkUserId ? await isBoardMember(clerkUserId, boardId) : false;
-
-  return {
-    board: {
-      id: boardId,
-      slug: board.slug as string,
-      name: board.name as string,
-      description: (board.description as string | null) ?? null,
-      memberCount: counts.get(boardId)?.members ?? 0,
-      sourceCount: counts.get(boardId)?.sources ?? 0
-    },
-    isMember,
-    sources,
-    initialEvents
-  };
-}
-
-export async function getBoardEventsBySlug(slug: string, since: string | null, limit = 50) {
-  const supabase = getServiceRoleClient();
-  const { data: board, error } = await supabase.from("boards").select("id").eq("slug", slug).single();
-
   if (error || !board) {
     throw new Error(error?.message ?? "Board not found.");
   }
 
-  return getBoardEvents(board.id as string, since, limit);
+  return {
+    id: String(board.id),
+    slug: String(board.slug),
+    name: String(board.name),
+    description: (board.description as string | null) ?? null
+  };
 }
 
-async function getBoardEvents(boardId: string, since: string | null, limit: number): Promise<BoardEvent[]> {
+async function getBoardEvents(
+  boardId: string,
+  since: string | null,
+  limit: number,
+  withinHours?: number
+): Promise<BoardEvent[]> {
   const supabase = getServiceRoleClient();
   let query = supabase
     .from("board_events")
@@ -116,6 +176,10 @@ async function getBoardEvents(boardId: string, since: string | null, limit: numb
     query = query.gt("created_at", since);
   }
 
+  if (withinHours) {
+    query = query.gte("created_at", hoursAgo(withinHours + 24));
+  }
+
   const { data, error } = await query;
 
   if (error) {
@@ -131,10 +195,13 @@ async function getBoardEvents(boardId: string, since: string | null, limit: numb
         return null;
       }
 
+      const eventType = String(event.event_type);
+
       return {
         id: String(event.id),
         githubEventId: String(event.github_event_id),
-        eventType: String(event.event_type),
+        eventType,
+        eventKind: mapEventKind(eventType),
         actorLogin: (event.actor_login as string | null) ?? null,
         repoName: (event.repo_name as string | null) ?? null,
         subjectTitle: (event.subject_title as string | null) ?? null,
@@ -149,10 +216,83 @@ async function getBoardEvents(boardId: string, since: string | null, limit: numb
         }
       } satisfies BoardEvent;
     })
-    .filter((row): row is BoardEvent => row !== null);
+    .filter((row): row is BoardEvent => row !== null)
+    .filter((row) => !withinHours || new Date(row.occurredAt).getTime() >= Date.now() - withinHours * 60 * 60 * 1000);
 }
 
-async function getBoardSources(boardId: string) {
+async function getBoardEventsForBoards(boardIds: string[], withinHours: number) {
+  const supabase = getServiceRoleClient();
+  const { data, error } = await supabase
+    .from("board_events")
+    .select(
+      `
+      board_id,
+      created_at,
+      event:events!board_events_event_id_fkey(
+        id,
+        github_event_id,
+        event_type,
+        actor_login,
+        repo_name,
+        subject_title,
+        subject_url,
+        occurred_at
+      ),
+      source:sources!board_events_source_id_fkey(
+        id,
+        type,
+        value,
+        display_name
+      )
+    `
+    )
+    .in("board_id", boardIds)
+    .gte("created_at", hoursAgo(withinHours + 24))
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? [])
+    .map((row) => {
+      const event = asObject(row.event);
+      const source = asObject(row.source);
+
+      if (!event || !source) {
+        return null;
+      }
+
+      const eventType = String(event.event_type);
+
+      return {
+        boardId: String(row.board_id),
+        event: {
+          id: String(event.id),
+          githubEventId: String(event.github_event_id),
+          eventType,
+          eventKind: mapEventKind(eventType),
+          actorLogin: (event.actor_login as string | null) ?? null,
+          repoName: (event.repo_name as string | null) ?? null,
+          subjectTitle: (event.subject_title as string | null) ?? null,
+          subjectUrl: (event.subject_url as string | null) ?? null,
+          occurredAt: String(event.occurred_at),
+          boardEventCreatedAt: String(row.created_at),
+          source: {
+            id: String(source.id),
+            type: source.type as "user" | "repo",
+            value: String(source.value),
+            displayName: String(source.display_name)
+          }
+        } satisfies BoardEvent
+      };
+    })
+    .filter((row): row is { boardId: string; event: BoardEvent } => row !== null)
+    .filter((row) => new Date(row.event.occurredAt).getTime() >= Date.now() - withinHours * 60 * 60 * 1000);
+}
+
+async function getBoardSources(boardId: string): Promise<BoardSource[]> {
   const supabase = getServiceRoleClient();
   const { data, error } = await supabase
     .from("board_sources")
@@ -258,6 +398,228 @@ async function getBoardCounts(boardIds: string[]) {
   return counts;
 }
 
+function toBoardListItem(
+  board: BoardRecord,
+  joined: boolean,
+  counts: Map<string, { members: number; sources: number }>,
+  events: BoardEvent[]
+): BoardListItem {
+  const countEntry = counts.get(board.id) ?? { members: 0, sources: 0 };
+
+  return {
+    id: board.id,
+    slug: board.slug,
+    name: board.name,
+    description: board.description,
+    memberCount: countEntry.members,
+    sourceCount: countEntry.sources,
+    joined,
+    summary: buildBoardSummary(events, countEntry.sources),
+    timeline: buildActivityBuckets(events, DASHBOARD_WINDOW_HOURS, 6)
+  };
+}
+
+function buildDashboardOverview(
+  boards: BoardListItem[],
+  recentEvents: Array<{ boardId: string; event: BoardEvent }>,
+  trackedSources: number
+): DashboardOverview {
+  const events = recentEvents.map((row) => row.event);
+  const joinedBoards = boards.filter((board) => board.joined);
+
+  return {
+    totalBoards: boards.length,
+    joinedBoards: joinedBoards.length,
+    trackedSources,
+    liveEvents24h: events.length,
+    skyline: buildActivityBuckets(events, DASHBOARD_WINDOW_HOURS, DASHBOARD_BUCKETS),
+    actorLeaders: buildTopActors(events, 6),
+    eventMix: buildMix(events)
+  };
+}
+
+function buildBoardSummary(events: BoardEvent[], sourceCount: number): BoardSummary {
+  const uniqueActors = new Set(events.map((event) => event.actorLogin).filter(Boolean));
+  const latestEventAt = events.reduce<string | null>((latest, event) => {
+    if (!latest) {
+      return event.occurredAt;
+    }
+
+    return new Date(event.occurredAt).getTime() > new Date(latest).getTime() ? event.occurredAt : latest;
+  }, null);
+
+  return {
+    totalEvents: events.length,
+    recentEvents: events.filter((event) => new Date(event.occurredAt).getTime() >= Date.now() - 60 * 60 * 1000).length,
+    liveSources: Math.max(
+      events.reduce((sum, event, index, all) => {
+        if (all.findIndex((candidate) => candidate.source.id === event.source.id) === index) {
+          return sum + 1;
+        }
+
+        return sum;
+      }, 0),
+      sourceCount ? 1 : 0
+    ),
+    uniqueActors: uniqueActors.size,
+    latestEventAt,
+    mix: buildMix(events)
+  };
+}
+
+function buildActivityBuckets(events: BoardEvent[], hoursWindow: number, bucketCount: number): ActivityBucket[] {
+  const now = Date.now();
+  const start = now - hoursWindow * 60 * 60 * 1000;
+  const bucketSize = (hoursWindow * 60 * 60 * 1000) / bucketCount;
+  const buckets = Array.from({ length: bucketCount }, (_, index) => {
+    const bucketStart = new Date(start + index * bucketSize);
+
+    return {
+      label: index === bucketCount - 1 ? "now" : formatBucketLabel(bucketStart, bucketSize),
+      bucketStart: bucketStart.toISOString(),
+      total: 0,
+      push: 0,
+      pull_request: 0,
+      issue: 0,
+      comment: 0,
+      release: 0,
+      watch: 0,
+      fork: 0,
+      other: 0
+    } satisfies ActivityBucket;
+  });
+
+  for (const event of events) {
+    const time = new Date(event.occurredAt).getTime();
+
+    if (time < start || time > now) {
+      continue;
+    }
+
+    const relativeIndex = Math.min(bucketCount - 1, Math.floor((time - start) / bucketSize));
+    const bucket = buckets[Math.max(0, relativeIndex)];
+    bucket.total += 1;
+    bucket[event.eventKind] += 1;
+  }
+
+  return buckets;
+}
+
+function buildSourceNodes(sources: BoardSource[], events: BoardEvent[]): SourceNode[] {
+  return sources.map((source) => {
+    const sourceEvents = events.filter((event) => event.source.id === source.id);
+
+    return {
+      ...source,
+      activityCount: sourceEvents.length,
+      latestEventAt: sourceEvents[0]?.occurredAt ?? null,
+      pulseScore: Math.max(12, Math.min(100, sourceEvents.length * 18))
+    };
+  });
+}
+
+function buildTopActors(events: BoardEvent[], limit: number): TopActor[] {
+  const counts = new Map<string, number>();
+
+  for (const event of events) {
+    if (!event.actorLogin) {
+      continue;
+    }
+
+    counts.set(event.actorLogin, (counts.get(event.actorLogin) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([login, count]) => ({ login, count }));
+}
+
+function buildMix(events: BoardEvent[]): EventMixItem[] {
+  const total = events.length || 1;
+  const counts = new Map<EventKind, number>([
+    ["push", 0],
+    ["pull_request", 0],
+    ["issue", 0],
+    ["comment", 0],
+    ["release", 0],
+    ["watch", 0],
+    ["fork", 0],
+    ["other", 0]
+  ]);
+
+  for (const event of events) {
+    counts.set(event.eventKind, (counts.get(event.eventKind) ?? 0) + 1);
+  }
+
+  return [
+    ["push", "Commits"],
+    ["pull_request", "PRs"],
+    ["issue", "Issues"],
+    ["comment", "Comments"],
+    ["release", "Releases"],
+    ["watch", "Stars"],
+    ["fork", "Forks"],
+    ["other", "Other"]
+  ]
+    .map(([kind, label]) => ({
+      kind: kind as EventKind,
+      label,
+      count: counts.get(kind as EventKind) ?? 0,
+      share: Math.round(((counts.get(kind as EventKind) ?? 0) / total) * 100)
+    }))
+    .filter((item) => item.count > 0);
+}
+
+function groupEventsByBoard(events: Array<{ boardId: string; event: BoardEvent }>) {
+  const grouped = new Map<string, BoardEvent[]>();
+
+  for (const row of events) {
+    const existing = grouped.get(row.boardId) ?? [];
+    existing.push(row.event);
+    grouped.set(row.boardId, existing);
+  }
+
+  return grouped;
+}
+
+function countTrackedSources(counts: Map<string, { members: number; sources: number }>, boardIds: string[]) {
+  return boardIds.reduce((sum, boardId) => sum + (counts.get(boardId)?.sources ?? 0), 0);
+}
+
+function mapEventKind(eventType: string): EventKind {
+  switch (eventType) {
+    case "PushEvent":
+      return "push";
+    case "PullRequestEvent":
+      return "pull_request";
+    case "IssuesEvent":
+      return "issue";
+    case "IssueCommentEvent":
+      return "comment";
+    case "ReleaseEvent":
+      return "release";
+    case "WatchEvent":
+      return "watch";
+    case "ForkEvent":
+      return "fork";
+    default:
+      return "other";
+  }
+}
+
+function formatBucketLabel(date: Date, bucketSize: number) {
+  if (bucketSize >= 60 * 60 * 1000) {
+    return date.toLocaleTimeString([], { hour: "numeric" });
+  }
+
+  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function hoursAgo(hours: number) {
+  return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+}
+
 function asObject(value: unknown): Record<string, unknown> | null {
   if (!value) {
     return null;
@@ -269,23 +631,4 @@ function asObject(value: unknown): Record<string, unknown> | null {
   }
 
   return typeof value === "object" ? (value as Record<string, unknown>) : null;
-}
-
-function toBoardListItem(
-  id: string,
-  slug: string,
-  name: string,
-  description: string | null,
-  joined: boolean,
-  counts: Map<string, { members: number; sources: number }>
-): BoardListItem {
-  return {
-    id,
-    slug,
-    name,
-    description,
-    memberCount: counts.get(id)?.members ?? 0,
-    sourceCount: counts.get(id)?.sources ?? 0,
-    joined
-  };
 }

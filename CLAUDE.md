@@ -14,6 +14,25 @@ Current product name:
 
 - `Pulseboard`
 
+## Current UI Direction
+
+The app now uses a dark, VS Code Radical-inspired interface:
+
+- deep violet / near-black surfaces
+- hot pink and cyan accent colors
+- denser dashboard composition instead of large warm cards
+- chart-first product pages using `Recharts`
+- custom SVG and Tailwind-powered motion for source orbit and live ticker visuals
+
+The product should feel like a live command room, not a neutral admin panel.
+
+UI rules:
+
+- prefer visual summaries over plain event lists
+- animate new activity gently; do not animate the whole page every poll
+- keep polling honest in copy: the UI can feel live, but GitHub can still lag
+- preserve usability on mobile; the layout can compress, but it should not collapse into generic cards
+
 ## Product Model
 
 Primary action:
