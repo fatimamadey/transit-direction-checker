@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import type { BoardListItem, DashboardData } from "@/types/dashboard";
 
@@ -15,9 +15,14 @@ type DashboardShellProps = {
 export function DashboardShell({ dashboardData, userName }: DashboardShellProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [hasMounted, setHasMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   async function createBoard() {
     setError(null);
@@ -68,8 +73,36 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
         </div>
       </header>
 
+      {!dashboardData.joinedBoards.length ? (
+        <section className="panel rounded-[28px] p-6">
+          <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Start here</p>
+          <h2 className="mt-1 text-3xl font-semibold text-white">You do not have any boards yet.</h2>
+          <p className="mt-3 max-w-3xl text-base leading-7 text-violet-100/70">
+            Create your own board or join a public one. Once you join a board, it appears here and you can add repos or users to it.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              className="rounded-full bg-[linear-gradient(135deg,#ff4fd8,#7c5cff)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_40px_rgba(255,79,216,0.35)] transition hover:opacity-95"
+              onClick={() => {
+                const element = document.getElementById("create-board-form");
+                element?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              type="button"
+            >
+              Create your first board
+            </button>
+            <Link
+              className="rounded-full border border-white/12 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-cyan-300/35 hover:bg-cyan-300/10"
+              href="/boards"
+            >
+              Join a public board
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-        <div className="panel rounded-[28px] p-5">
+        <div className="panel rounded-[28px] p-5" id="create-board-form">
           <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Create board</p>
           <h2 className="mt-1 text-2xl font-semibold text-white">New group</h2>
           <p className="mt-2 text-sm leading-6 text-violet-100/68">Pick a clear name. Then add the repos and users that belong in it.</p>
@@ -113,7 +146,7 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
           </form>
         </div>
 
-        <div className="panel rounded-[28px] p-5">
+        <div className="panel min-w-0 rounded-[28px] p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Activity</p>
@@ -123,32 +156,36 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
               {dashboardData.overview.liveEvents24h} in 24h
             </div>
           </div>
-          <div className="h-[240px] rounded-[24px] border border-white/8 bg-[#110d1f]/90 p-4">
-            <ResponsiveContainer height="100%" minHeight={180} minWidth={0} width="100%">
-              <AreaChart data={dashboardData.overview.skyline}>
-                <defs>
-                  <linearGradient id="dashboardPush" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#5fe1ff" stopOpacity={0.7} />
-                    <stop offset="100%" stopColor="#5fe1ff" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="dashboardPr" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#ff4fd8" stopOpacity={0.6} />
-                    <stop offset="100%" stopColor="#ff4fd8" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "#120f23",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 16,
-                    color: "#f4efff"
-                  }}
-                />
-                <Area dataKey="push" fill="url(#dashboardPush)" stroke="#5fe1ff" strokeWidth={2} type="monotone" />
-                <Area dataKey="pull_request" fill="url(#dashboardPr)" stroke="#ff4fd8" strokeWidth={2} type="monotone" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-[240px] min-w-0 rounded-[24px] border border-white/8 bg-[#110d1f]/90 p-4">
+            {hasMounted ? (
+              <ResponsiveContainer height="100%" minHeight={180} minWidth={0} width="100%">
+                <AreaChart data={dashboardData.overview.skyline}>
+                  <defs>
+                    <linearGradient id="dashboardPush" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#5fe1ff" stopOpacity={0.7} />
+                      <stop offset="100%" stopColor="#5fe1ff" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="dashboardPr" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#ff4fd8" stopOpacity={0.6} />
+                      <stop offset="100%" stopColor="#ff4fd8" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#120f23",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 16,
+                      color: "#f4efff"
+                    }}
+                  />
+                  <Area dataKey="push" fill="url(#dashboardPush)" stroke="#5fe1ff" strokeWidth={2} type="monotone" />
+                  <Area dataKey="pull_request" fill="url(#dashboardPr)" stroke="#ff4fd8" strokeWidth={2} type="monotone" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full rounded-[18px] border border-white/6 bg-white/[0.03]" />
+            )}
           </div>
         </div>
       </section>

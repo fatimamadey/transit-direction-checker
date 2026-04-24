@@ -20,6 +20,10 @@
 - Browser polls board snapshots every ~5 seconds
 - UI uses a dark Radical-inspired control-room aesthetic with charts, source orbit visuals, and an animated live ticker
 - Board cards always show the board name, tracked repos/users, and the main action to open the board
+- Entry flow is split clearly:
+  - `/` explains the app and shows a public-board carousel
+  - `/boards` is the public board directory
+  - `/dashboard` is the signed-in workspace for your boards
 
 ## Local setup
 
@@ -66,6 +70,8 @@ Run:
 
 1. `supabase/schema.sql`
 2. `supabase/seed.sql`
+
+The seed file creates a few public sample boards so the landing page and public directory are populated immediately.
 
 ### 4. Configure Clerk
 

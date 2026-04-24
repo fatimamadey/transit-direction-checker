@@ -99,6 +99,7 @@ export type DashboardData = {
 };
 
 export type BoardPageData = {
+  signedIn: boolean;
   board: {
     id: string;
     slug: string;

@@ -160,7 +160,7 @@ function PublicBoardCard({ board, signedIn }: { board: BoardListItem; signedIn: 
         ) : (
           <Link
             className="rounded-full border border-white/12 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-cyan-300/35 hover:bg-cyan-300/10"
-            href="/sign-in"
+            href={`/sign-in?redirect_url=${encodeURIComponent(`/boards/${board.slug}`)}`}
           >
             Sign in to join
           </Link>

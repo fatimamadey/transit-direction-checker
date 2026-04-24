@@ -37,6 +37,10 @@ UI rules:
   - show the exact tracked repos/users on every board card
   - reserve the strongest button styling for real actions only
   - keep labels direct and short
+- first-run and signed-out states must be useful:
+  - landing page should show public boards immediately
+  - empty signed-in dashboards should push users toward either creating or joining a board
+  - board detail pages should make the signed-out join path obvious
 
 ## Product Model
 

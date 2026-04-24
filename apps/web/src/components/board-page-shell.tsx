@@ -30,11 +30,18 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
   const [summary, setSummary] = useState(data.summary);
   const [timelineBuckets, setTimelineBuckets] = useState(data.timelineBuckets);
   const [sourceNodes, setSourceNodes] = useState(data.sourceNodes);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [boardName, setBoardName] = useState(data.board.name);
+  const [boardDescription, setBoardDescription] = useState(data.board.description ?? "");
   const [sourceType, setSourceType] = useState<"user" | "repo">("repo");
   const [sourceValue, setSourceValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   async function joinBoard() {
     setError(null);
@@ -73,6 +80,29 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
     router.refresh();
   }
 
+  async function saveBoard() {
+    setError(null);
+    const response = await fetch(`/api/boards/${data.board.slug}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name: boardName,
+        description: boardDescription
+      })
+    });
+
+    const payload = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(payload.error ?? "Could not update board.");
+      return;
+    }
+
+    router.refresh();
+  }
+
   useBoardPolling(data.board.slug, events, setEvents, setSummary, setTimelineBuckets, setSourceNodes);
 
   return (
@@ -98,13 +128,22 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
 
           <div className="flex flex-col gap-3">
             {!data.isMember ? (
-              <button
-                className="rounded-full bg-[linear-gradient(135deg,#ff4fd8,#7c5cff)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_40px_rgba(255,79,216,0.35)] transition hover:opacity-95"
-                onClick={() => startTransition(() => void joinBoard())}
-                type="button"
-              >
-                {isPending ? "Joining..." : "Join board"}
-              </button>
+              data.signedIn ? (
+                <button
+                  className="rounded-full bg-[linear-gradient(135deg,#ff4fd8,#7c5cff)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_40px_rgba(255,79,216,0.35)] transition hover:opacity-95"
+                  onClick={() => startTransition(() => void joinBoard())}
+                  type="button"
+                >
+                  {isPending ? "Joining..." : "Join board"}
+                </button>
+              ) : (
+                <a
+                  className="rounded-full bg-[linear-gradient(135deg,#ff4fd8,#7c5cff)] px-5 py-3 text-center text-sm font-semibold text-white shadow-[0_14px_40px_rgba(255,79,216,0.35)] transition hover:opacity-95"
+                  href={`/sign-in?redirect_url=${encodeURIComponent(`/boards/${data.board.slug}`)}`}
+                >
+                  Sign in to join
+                </a>
+              )
             ) : (
               <div className="mono rounded-full border border-emerald-300/20 bg-emerald-400/10 px-5 py-3 text-[11px] uppercase tracking-[0.28em] text-emerald-200">
                 joined
@@ -130,28 +169,32 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
         </div>
 
         <div className="grid gap-4">
-          <div className="panel rounded-[28px] p-5">
+          <div className="panel min-w-0 rounded-[28px] p-5">
             <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Activity mix</p>
             <h2 className="mt-1 text-2xl font-semibold text-white">What happened here</h2>
             <div className="mt-4 grid gap-4 lg:grid-cols-[180px_1fr]">
-              <div className="h-[180px]">
-                <ResponsiveContainer height="100%" minHeight={180} minWidth={0} width="100%">
-                  <PieChart>
-                    <Pie
-                      cx="50%"
-                      cy="50%"
-                      data={summary.mix}
-                      dataKey="count"
-                      innerRadius={42}
-                      outerRadius={74}
-                      paddingAngle={4}
-                    >
-                      {summary.mix.map((item) => (
-                        <Cell fill={colorFor(item.kind)} key={item.kind} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+              <div className="h-[180px] min-w-0">
+                {hasMounted ? (
+                  <ResponsiveContainer height="100%" minHeight={180} minWidth={0} width="100%">
+                    <PieChart>
+                      <Pie
+                        cx="50%"
+                        cy="50%"
+                        data={summary.mix}
+                        dataKey="count"
+                        innerRadius={42}
+                        outerRadius={74}
+                        paddingAngle={4}
+                      >
+                        {summary.mix.map((item) => (
+                          <Cell fill={colorFor(item.kind)} key={item.kind} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full rounded-[18px] border border-white/6 bg-white/[0.03]" />
+                )}
               </div>
               <MixBars items={summary.mix} />
             </div>
@@ -180,7 +223,7 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="panel rounded-[28px] p-5">
+        <div className="panel min-w-0 rounded-[28px] p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Timeline</p>
@@ -190,43 +233,80 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
               {summary.recentEvents} last hour
             </div>
           </div>
-          <div className="h-[310px] rounded-[24px] border border-white/8 bg-[#110d1f]/95 p-4">
-            <ResponsiveContainer height="100%" minHeight={240} minWidth={0} width="100%">
-              <AreaChart data={timelineBuckets}>
-                <defs>
-                  <linearGradient id="timelinePush" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#5fe1ff" stopOpacity={0.75} />
-                    <stop offset="100%" stopColor="#5fe1ff" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="timelinePr" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#ff4fd8" stopOpacity={0.64} />
-                    <stop offset="100%" stopColor="#ff4fd8" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "#120f23",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 16,
-                    color: "#f4efff"
-                  }}
-                />
-                <Area dataKey="push" fill="url(#timelinePush)" stroke="#5fe1ff" strokeWidth={2} type="monotone" />
-                <Area
-                  dataKey="pull_request"
-                  fill="url(#timelinePr)"
-                  stroke="#ff4fd8"
-                  strokeWidth={2}
-                  type="monotone"
-                />
-                <Area dataKey="issue" fill="none" stroke="#ffb84c" strokeWidth={2} type="monotone" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-[310px] min-w-0 rounded-[24px] border border-white/8 bg-[#110d1f]/95 p-4">
+            {hasMounted ? (
+              <ResponsiveContainer height="100%" minHeight={240} minWidth={0} width="100%">
+                <AreaChart data={timelineBuckets}>
+                  <defs>
+                    <linearGradient id="timelinePush" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#5fe1ff" stopOpacity={0.75} />
+                      <stop offset="100%" stopColor="#5fe1ff" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="timelinePr" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#ff4fd8" stopOpacity={0.64} />
+                      <stop offset="100%" stopColor="#ff4fd8" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#120f23",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 16,
+                      color: "#f4efff"
+                    }}
+                  />
+                  <Area dataKey="push" fill="url(#timelinePush)" stroke="#5fe1ff" strokeWidth={2} type="monotone" />
+                  <Area
+                    dataKey="pull_request"
+                    fill="url(#timelinePr)"
+                    stroke="#ff4fd8"
+                    strokeWidth={2}
+                    type="monotone"
+                  />
+                  <Area dataKey="issue" fill="none" stroke="#ffb84c" strokeWidth={2} type="monotone" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full rounded-[18px] border border-white/6 bg-white/[0.03]" />
+            )}
           </div>
         </div>
 
         <aside className="space-y-4">
+          {data.isMember ? (
+            <form
+              className="panel rounded-[28px] p-5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                startTransition(() => void saveBoard());
+              }}
+            >
+              <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Board settings</p>
+              <h2 className="mt-1 text-2xl font-semibold text-white">Edit board</h2>
+              <div className="mt-4 space-y-4">
+                <input
+                  className="w-full rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-cyan-300/60"
+                  onChange={(event) => setBoardName(event.target.value)}
+                  value={boardName}
+                />
+                <textarea
+                  className="min-h-24 w-full rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-cyan-300/60"
+                  onChange={(event) => setBoardDescription(event.target.value)}
+                  value={boardDescription}
+                />
+                {error ? <p className="text-sm font-medium text-rose-300">{error}</p> : null}
+                <button
+                  className="w-full rounded-full border border-white/12 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-cyan-300/35 hover:bg-cyan-300/10 disabled:opacity-60"
+                  disabled={isPending}
+                  type="submit"
+                >
+                  {isPending ? "Saving..." : "Save board details"}
+                </button>
+              </div>
+            </form>
+          ) : null}
+
           <div className="panel rounded-[28px] p-5">
             <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Tracking</p>
             <h2 className="mt-1 text-2xl font-semibold text-white">Tracked sources</h2>

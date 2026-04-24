@@ -109,6 +109,7 @@ export async function getBoardPageData(slug: string, clerkUserId: string | null)
   const isMember = clerkUserId ? await isBoardMember(clerkUserId, board.id) : false;
 
   return {
+    signedIn: Boolean(clerkUserId),
     board: {
       id: board.id,
       slug: board.slug,
