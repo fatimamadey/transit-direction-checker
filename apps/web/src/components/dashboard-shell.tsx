@@ -54,6 +54,12 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
           </div>
 
           <div className="flex items-center gap-3 self-start">
+            <Link
+              className="rounded-full border border-white/12 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-cyan-300/35 hover:bg-cyan-300/10"
+              href="/boards"
+            >
+              Browse public boards
+            </Link>
             <div className="mono rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] uppercase tracking-[0.22em] text-cyan-200/75">
               {userName}
             </div>

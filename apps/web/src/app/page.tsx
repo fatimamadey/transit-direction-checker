@@ -8,6 +8,37 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto min-h-screen max-w-[1500px] px-4 py-4 sm:px-6 lg:px-8">
+      <nav className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4">
+        <Link className="text-xl font-semibold text-white" href="/">
+          Pulseboard
+        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link className="mono text-sm text-violet-100/75 transition hover:text-white" href="/boards">
+            Public boards
+          </Link>
+          {userId ? (
+            <Link
+              className="rounded-full border border-white/12 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-cyan-300/35 hover:bg-cyan-300/10"
+              href="/dashboard"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link className="mono text-sm text-violet-100/75 transition hover:text-white" href="/sign-in">
+                Sign in
+              </Link>
+              <Link
+                className="rounded-full bg-[linear-gradient(135deg,#ff4fd8,#7c5cff)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_40px_rgba(255,79,216,0.35)] transition hover:opacity-95"
+                href="/sign-up"
+              >
+                Create account
+              </Link>
+            </>
+          )}
+        </div>
+      </nav>
+
       <section className="panel-strong relative overflow-hidden rounded-[34px] p-6 sm:p-8 lg:p-10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_5%_10%,rgba(95,225,255,0.14),transparent_26%),radial-gradient(circle_at_85%_15%,rgba(255,79,216,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent)]" />
 
@@ -50,13 +81,13 @@ export default async function HomePage() {
                     className="rounded-full bg-[linear-gradient(135deg,#ff4fd8,#7c5cff)] px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_46px_rgba(255,79,216,0.38)] transition hover:opacity-95"
                     href="/sign-up"
                   >
-                    Get started
+                    Create account
                   </Link>
                   <Link
                     className="rounded-full border border-white/12 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:border-cyan-300/35 hover:bg-cyan-300/10"
-                    href="/sign-in"
+                    href="/boards"
                   >
-                    Sign in
+                    Browse boards
                   </Link>
                 </>
               )}
