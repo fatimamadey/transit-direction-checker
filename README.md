@@ -1,6 +1,6 @@
 # Pulseboard
 
-`Pulseboard` is a GitHub activity dashboard where people join public boards and watch GitHub events as a visual pulse instead of a plain feed. Boards aggregate activity from tracked GitHub users and repositories. The frontend polls our own API, and the worker polls GitHub sources with ETags and fanout.
+`Pulseboard` is a GitHub activity dashboard built around named boards. Each board is a clear group of tracked GitHub users and repositories. The landing page and dashboard show what each board is called and exactly which sources it tracks. Opening a board takes you to the detail page with activity stats, charts, and the recent event stream. The frontend polls our own API, and the worker polls GitHub sources with ETags and fanout.
 
 ## Stack
 
@@ -19,6 +19,7 @@
 - Worker polls GitHub sources, not boards
 - Browser polls board snapshots every ~5 seconds
 - UI uses a dark Radical-inspired control-room aesthetic with charts, source orbit visuals, and an animated live ticker
+- Board cards always show the board name, tracked repos/users, and the main action to open the board
 
 ## Local setup
 

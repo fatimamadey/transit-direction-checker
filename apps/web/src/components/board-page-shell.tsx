@@ -81,11 +81,11 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(95,225,255,0.15),transparent_30%),radial-gradient(circle_at_100%_0%,rgba(255,79,216,0.14),transparent_28%)]" />
         <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="space-y-4">
-            <p className="mono text-[11px] uppercase tracking-[0.3em] text-violet-200/70">Board command center</p>
+            <p className="mono text-[11px] uppercase tracking-[0.3em] text-violet-200/70">Board</p>
             <div>
               <h1 className="text-4xl font-semibold text-white sm:text-6xl">{data.board.name}</h1>
               <p className="mt-3 max-w-3xl text-base leading-7 text-violet-100/70">
-                {data.board.description ?? "A shared GitHub activity board with a live visual pulse."}
+                {data.board.description ?? "A GitHub group with tracked repos and users."}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -107,11 +107,11 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
               </button>
             ) : (
               <div className="mono rounded-full border border-emerald-300/20 bg-emerald-400/10 px-5 py-3 text-[11px] uppercase tracking-[0.28em] text-emerald-200">
-                joined and watching
+                joined
               </div>
             )}
             <p className="mono text-[11px] uppercase tracking-[0.22em] text-violet-200/55">
-              GitHub can lag 30s to a few minutes
+              GitHub can lag
             </p>
           </div>
         </div>
@@ -121,12 +121,10 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
         <div className="panel rounded-[28px] p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Source orbit</p>
-              <h2 className="mt-1 text-2xl font-semibold text-white">Who is driving this board right now</h2>
+              <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Tracked sources</p>
+              <h2 className="mt-1 text-2xl font-semibold text-white">Repos and users in this board</h2>
             </div>
-            <span className="mono rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] uppercase tracking-[0.24em] text-cyan-200/75">
-              live source map
-            </span>
+            <span className="mono text-[11px] uppercase tracking-[0.24em] text-cyan-200/75">source map</span>
           </div>
           <SourceOrbit nodes={sourceNodes} />
         </div>
@@ -134,7 +132,7 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
         <div className="grid gap-4">
           <div className="panel rounded-[28px] p-5">
             <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Activity mix</p>
-            <h2 className="mt-1 text-2xl font-semibold text-white">Signal breakdown</h2>
+            <h2 className="mt-1 text-2xl font-semibold text-white">What happened here</h2>
             <div className="mt-4 grid gap-4 lg:grid-cols-[180px_1fr]">
               <div className="h-[180px]">
                 <ResponsiveContainer height="100%" minHeight={180} minWidth={0} width="100%">
@@ -161,7 +159,7 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
 
           <div className="panel rounded-[28px] p-5">
             <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Top actors</p>
-            <h2 className="mt-1 text-2xl font-semibold text-white">Who is moving the graph</h2>
+            <h2 className="mt-1 text-2xl font-semibold text-white">Most active users</h2>
             <div className="mt-4 space-y-3">
               {data.topActors.length ? (
                 data.topActors.map((actor, index) => (
@@ -185,8 +183,8 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
         <div className="panel rounded-[28px] p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Event pulse timeline</p>
-              <h2 className="mt-1 text-2xl font-semibold text-white">Rhythm of the last 24 hours</h2>
+              <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Timeline</p>
+              <h2 className="mt-1 text-2xl font-semibold text-white">Activity in the last 24 hours</h2>
             </div>
             <div className="mono rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[11px] uppercase tracking-[0.22em] text-cyan-200">
               {summary.recentEvents} last hour
@@ -230,7 +228,7 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
 
         <aside className="space-y-4">
           <div className="panel rounded-[28px] p-5">
-            <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Source control panel</p>
+            <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Tracking</p>
             <h2 className="mt-1 text-2xl font-semibold text-white">Tracked sources</h2>
             <div className="mt-4 space-y-3">
               {data.sources.length ? (
@@ -255,7 +253,7 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
               }}
             >
               <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Add source</p>
-              <h2 className="mt-1 text-2xl font-semibold text-white">Inject a new signal</h2>
+              <h2 className="mt-1 text-2xl font-semibold text-white">Add repo or user</h2>
               <div className="mt-4 space-y-4">
                 <select
                   className="w-full rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-cyan-300/60"
@@ -289,8 +287,8 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
       <section className="panel rounded-[28px] p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Live ticker</p>
-            <h2 className="mt-1 text-2xl font-semibold text-white">Newest activity fragments</h2>
+            <p className="mono text-[11px] uppercase tracking-[0.28em] text-violet-200/65">Latest events</p>
+            <h2 className="mt-1 text-2xl font-semibold text-white">Recent GitHub activity</h2>
           </div>
           <div className="mono text-[11px] uppercase tracking-[0.22em] text-cyan-200/75">
             {summary.latestEventAt ? `last seen ${formatRelative(summary.latestEventAt)}` : "waiting for traffic"}

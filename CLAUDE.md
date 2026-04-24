@@ -32,6 +32,11 @@ UI rules:
 - animate new activity gently; do not animate the whole page every poll
 - keep polling honest in copy: the UI can feel live, but GitHub can still lag
 - preserve usability on mobile; the layout can compress, but it should not collapse into generic cards
+- make boards legible before they are impressive:
+  - show the board name clearly
+  - show the exact tracked repos/users on every board card
+  - reserve the strongest button styling for real actions only
+  - keep labels direct and short
 
 ## Product Model
 

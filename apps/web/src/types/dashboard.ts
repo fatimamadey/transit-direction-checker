@@ -74,6 +74,9 @@ export type BoardListItem = {
   description: string | null;
   memberCount: number;
   sourceCount: number;
+  trackedSources: BoardSource[];
+  repoSourceCount: number;
+  userSourceCount: number;
   joined: boolean;
   summary: BoardSummary;
   timeline: ActivityBucket[];

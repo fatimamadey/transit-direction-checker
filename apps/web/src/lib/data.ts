@@ -54,12 +54,13 @@ export async function getDashboardData(clerkUserId: string): Promise<DashboardDa
   const boardIds = boardRows.map((board) => board.id);
   const joinedSet = new Set((memberships ?? []).map((membership) => membership.board_id as string));
   const counts = boardIds.length ? await getBoardCounts(boardIds) : new Map<string, { members: number; sources: number }>();
+  const sourcePreviewMap = boardIds.length ? await getBoardSourcePreview(boardIds) : new Map<string, BoardSource[]>();
   const recentEvents = boardIds.length ? await getBoardEventsForBoards(boardIds, DASHBOARD_WINDOW_HOURS) : [];
   const groupedEvents = groupEventsByBoard(recentEvents);
   const trackedSources = countTrackedSources(counts, boardIds);
 
   const boardList = boardRows.map((board) =>
-    toBoardListItem(board, joinedSet.has(board.id), counts, groupedEvents.get(board.id) ?? [])
+    toBoardListItem(board, joinedSet.has(board.id), counts, groupedEvents.get(board.id) ?? [], sourcePreviewMap.get(board.id) ?? [])
   );
 
   return {
@@ -67,6 +68,36 @@ export async function getDashboardData(clerkUserId: string): Promise<DashboardDa
     joinedBoards: boardList.filter((board) => board.joined),
     publicBoards: boardList
   };
+}
+
+export async function getPublicBoardsData(limit = 6): Promise<BoardListItem[]> {
+  const supabase = getServiceRoleClient();
+  const { data: boards, error } = await supabase
+    .from("boards")
+    .select("id, slug, name, description")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const boardRows = ((boards ?? []) as Record<string, unknown>[]).map((board) => ({
+    id: String(board.id),
+    slug: String(board.slug),
+    name: String(board.name),
+    description: (board.description as string | null) ?? null
+  }));
+
+  const boardIds = boardRows.map((board) => board.id);
+  const counts = boardIds.length ? await getBoardCounts(boardIds) : new Map<string, { members: number; sources: number }>();
+  const sourcePreviewMap = boardIds.length ? await getBoardSourcePreview(boardIds) : new Map<string, BoardSource[]>();
+  const recentEvents = boardIds.length ? await getBoardEventsForBoards(boardIds, DASHBOARD_WINDOW_HOURS) : [];
+  const groupedEvents = groupEventsByBoard(recentEvents);
+
+  return boardRows.map((board) =>
+    toBoardListItem(board, false, counts, groupedEvents.get(board.id) ?? [], sourcePreviewMap.get(board.id) ?? [])
+  );
 }
 
 export async function getBoardPageData(slug: string, clerkUserId: string | null): Promise<BoardPageData> {
@@ -398,13 +429,59 @@ async function getBoardCounts(boardIds: string[]) {
   return counts;
 }
 
+async function getBoardSourcePreview(boardIds: string[]) {
+  const supabase = getServiceRoleClient();
+  const { data, error } = await supabase
+    .from("board_sources")
+    .select(
+      `
+      board_id,
+      source:sources!board_sources_source_id_fkey(
+        id,
+        type,
+        value,
+        display_name
+      )
+    `
+    )
+    .in("board_id", boardIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const grouped = new Map<string, BoardSource[]>();
+
+  for (const row of data ?? []) {
+    const source = asObject(row.source);
+    if (!source) {
+      continue;
+    }
+
+    const boardId = String(row.board_id);
+    const current = grouped.get(boardId) ?? [];
+    current.push({
+      id: String(source.id),
+      type: source.type as "user" | "repo",
+      value: String(source.value),
+      displayName: String(source.display_name)
+    });
+    grouped.set(boardId, current);
+  }
+
+  return grouped;
+}
+
 function toBoardListItem(
   board: BoardRecord,
   joined: boolean,
   counts: Map<string, { members: number; sources: number }>,
-  events: BoardEvent[]
+  events: BoardEvent[],
+  trackedSources: BoardSource[]
 ): BoardListItem {
   const countEntry = counts.get(board.id) ?? { members: 0, sources: 0 };
+  const repoSourceCount = trackedSources.filter((source) => source.type === "repo").length;
+  const userSourceCount = trackedSources.filter((source) => source.type === "user").length;
 
   return {
     id: board.id,
@@ -413,6 +490,9 @@ function toBoardListItem(
     description: board.description,
     memberCount: countEntry.members,
     sourceCount: countEntry.sources,
+    trackedSources: trackedSources.slice(0, 4),
+    repoSourceCount,
+    userSourceCount,
     joined,
     summary: buildBoardSummary(events, countEntry.sources),
     timeline: buildActivityBuckets(events, DASHBOARD_WINDOW_HOURS, 6)

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  --font-display: "JetBrains Mono", "IBM Plex Mono", "SFMono-Regular", "Consolas", "Menlo", monospace;
   --bg: #0b0914;
   --bg-elevated: #130f23;
   --panel: rgba(19, 15, 35, 0.82);
@@ -24,7 +25,7 @@
 }
 
 html {
-  font-family: "Segoe UI Variable Display", "Aptos", "Helvetica Neue", "Arial Nova", sans-serif;
+  font-family: var(--font-display);
   background: var(--bg);
 }
 
@@ -78,12 +79,12 @@ textarea,
 select,
 label,
 a {
-  font-family: var(--font-display), sans-serif;
+  font-family: var(--font-display);
 }
 
 code,
 .mono {
-  font-family: "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono", "Consolas", monospace;
+  font-family: var(--font-display);
 }
 
 ::selection {
