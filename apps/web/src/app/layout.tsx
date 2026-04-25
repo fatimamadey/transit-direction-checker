@@ -30,7 +30,7 @@ export default function RootLayout({
           rootBox: "w-full",
           cardBox: "w-full max-w-[460px]",
           card: "border border-white/16 bg-[#20193d] shadow-[0_32px_90px_rgba(7,6,15,0.72)]",
-          headerTitle: "font-[var(--font-display)] text-white !text-white",
+          headerTitle: "font-[var(--font-mono)] text-white !text-white",
           headerSubtitle: "text-white/92",
           socialButtonsBlockButtonText: "!text-white",
           socialButtonsBlockButton:

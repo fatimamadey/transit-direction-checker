@@ -16,31 +16,31 @@ Current product name:
 
 ## Current UI Direction
 
-The app now uses a dark, VS Code Radical-inspired interface:
+The app now uses a dark, editor-style interface inspired by VS Code Radical, but the emphasis is clarity over spectacle:
 
 - deep violet / near-black surfaces
-- hot pink and cyan accent colors
-- denser dashboard composition instead of large warm cards
-- chart-first product pages using `Recharts`
-- custom SVG and Tailwind-powered motion for source orbit and live ticker visuals
+- hot pink primary action accent and cyan status accent
+- asymmetric rails and board rows instead of repeated card grids
+- moderate heading scale, not oversized hero typography
+- compact charts used as support, not as decoration
+- event feed is the main surface on board pages
 
-The product should feel like a live command room, not a neutral admin panel.
+The product should feel like opening a live workspace, not scrolling a marketing site.
 
 UI rules:
 
-- prefer visual summaries over plain event lists
-- animate new activity gently; do not animate the whole page every poll
-- keep polling honest in copy: the UI can feel live, but GitHub can still lag
-- preserve usability on mobile; the layout can compress, but it should not collapse into generic cards
-- make boards legible before they are impressive:
-  - show the board name clearly
-  - show the exact tracked repos/users on every board card
-  - reserve the strongest button styling for real actions only
-  - keep labels direct and short
-- first-run and signed-out states must be useful:
-  - landing page should show public boards immediately
-  - empty signed-in dashboards should push users toward either creating or joining a board
-  - board detail pages should make the signed-out join path obvious
+- put the most useful thing first on every page
+- use board rows instead of square metric cards wherever possible
+- keep copy short and direct; remove filler phrases
+- reserve strong button styling for real actions only
+- show freshness on board listings so users can decide what is worth opening
+- signed-out users should see real public content immediately
+- signed-in users should land on their boards first
+- board detail pages should prioritize:
+  - recent events
+  - tracked sources
+  - add/join/edit actions
+  - compact status summary
 
 ## Product Model
 
@@ -150,7 +150,7 @@ Key columns:
 
 Purpose:
 
-- public collections of GitHub activity
+- named collections of GitHub activity
 
 Key columns:
 
@@ -158,12 +158,13 @@ Key columns:
 - `slug text unique not null`
 - `name text not null`
 - `description text`
+- `is_public boolean not null default true`
 - `created_by_user_id uuid references users(id)`
 - `created_at timestamptz`
 
 Rules:
 
-- boards are public
+- boards can be public or private
 - slugs are unique
 - creator is the initial member
 

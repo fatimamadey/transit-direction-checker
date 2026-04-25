@@ -11,7 +11,6 @@ import type {
   DashboardOverview,
   EventKind,
   EventMixItem,
-  SourceNode,
   TopActor
 } from "@/types/dashboard";
 
@@ -130,7 +129,6 @@ export async function getBoardPageData(slug: string, clerkUserId: string | null)
     },
     isMember,
     sources,
-    sourceNodes: buildSourceNodes(sources, recentEvents),
     summary: buildBoardSummary(recentEvents, sources.length),
     timelineBuckets: buildActivityBuckets(recentEvents, BOARD_WINDOW_HOURS, BOARD_BUCKETS),
     topActors: buildTopActors(recentEvents, 5),
@@ -160,7 +158,6 @@ export async function getBoardSnapshotBySlug(
     events: events.reverse(),
     summary: buildBoardSummary(recentEvents, sources.length),
     timelineBuckets: buildActivityBuckets(recentEvents, BOARD_WINDOW_HOURS, BOARD_BUCKETS),
-    sourceNodes: buildSourceNodes(sources, recentEvents),
     serverTime: new Date().toISOString()
   };
 }
@@ -541,9 +538,7 @@ function buildDashboardOverview(
     joinedBoards: joinedBoards.length,
     trackedSources,
     liveEvents24h: events.length,
-    skyline: buildActivityBuckets(events, DASHBOARD_WINDOW_HOURS, DASHBOARD_BUCKETS),
-    actorLeaders: buildTopActors(events, 6),
-    eventMix: buildMix(events)
+    skyline: buildActivityBuckets(events, DASHBOARD_WINDOW_HOURS, DASHBOARD_BUCKETS)
   };
 }
 
@@ -612,19 +607,6 @@ function buildActivityBuckets(events: BoardEvent[], hoursWindow: number, bucketC
   }
 
   return buckets;
-}
-
-function buildSourceNodes(sources: BoardSource[], events: BoardEvent[]): SourceNode[] {
-  return sources.map((source) => {
-    const sourceEvents = events.filter((event) => event.source.id === source.id);
-
-    return {
-      ...source,
-      activityCount: sourceEvents.length,
-      latestEventAt: sourceEvents[0]?.occurredAt ?? null,
-      pulseScore: Math.max(12, Math.min(100, sourceEvents.length * 18))
-    };
-  });
 }
 
 function buildTopActors(events: BoardEvent[], limit: number): TopActor[] {

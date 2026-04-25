@@ -1,10 +1,5 @@
 export type EventKind = "push" | "pull_request" | "issue" | "comment" | "release" | "watch" | "fork" | "other";
 
-export type MetricPoint = {
-  label: string;
-  value: number;
-};
-
 export type ActivityBucket = {
   label: string;
   bucketStart: string;
@@ -31,12 +26,6 @@ export type BoardSource = {
   type: "user" | "repo";
   value: string;
   displayName: string;
-};
-
-export type SourceNode = BoardSource & {
-  activityCount: number;
-  latestEventAt: string | null;
-  pulseScore: number;
 };
 
 export type TopActor = {
@@ -89,8 +78,6 @@ export type DashboardOverview = {
   trackedSources: number;
   liveEvents24h: number;
   skyline: ActivityBucket[];
-  actorLeaders: TopActor[];
-  eventMix: EventMixItem[];
 };
 
 export type DashboardData = {
@@ -112,7 +99,6 @@ export type BoardPageData = {
   };
   isMember: boolean;
   sources: BoardSource[];
-  sourceNodes: SourceNode[];
   summary: BoardSummary;
   timelineBuckets: ActivityBucket[];
   topActors: TopActor[];
@@ -123,6 +109,5 @@ export type BoardSnapshot = {
   events: BoardEvent[];
   summary: BoardSummary;
   timelineBuckets: ActivityBucket[];
-  sourceNodes: SourceNode[];
   serverTime: string;
 };

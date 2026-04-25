@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --font-display: "JetBrains Mono", "IBM Plex Mono", "SFMono-Regular", "Consolas", "Menlo", monospace;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "IBM Plex Mono", "Consolas", "Menlo", monospace;
   --bg: #0b0914;
   --bg-elevated: #130f23;
   --panel: rgba(19, 15, 35, 0.82);
@@ -25,15 +26,15 @@
 }
 
 html {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   background: var(--bg);
 }
 
 body {
   background:
-    radial-gradient(circle at top, rgba(124, 92, 255, 0.18) 0%, transparent 28%),
-    radial-gradient(circle at 90% 20%, rgba(255, 79, 216, 0.16) 0%, transparent 24%),
-    linear-gradient(180deg, rgba(95, 225, 255, 0.08) 0%, transparent 18%),
+    radial-gradient(circle at top, rgba(124, 92, 255, 0.12) 0%, transparent 24%),
+    radial-gradient(circle at 90% 20%, rgba(255, 79, 216, 0.12) 0%, transparent 18%),
+    linear-gradient(180deg, rgba(95, 225, 255, 0.05) 0%, transparent 16%),
     linear-gradient(180deg, #090711 0%, #0d0a18 40%, #0b0914 100%);
   color: var(--foreground);
   min-height: 100vh;
@@ -41,21 +42,7 @@ body {
 }
 
 body::before {
-  background-image:
-    linear-gradient(to right, var(--grid) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: 42px 42px;
-  content: "";
-  inset: 0;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.85), transparent);
-  pointer-events: none;
-  position: fixed;
-  z-index: -1;
-}
-
-body::after {
-  animation: scanline 10s linear infinite;
-  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.025), transparent);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 30%);
   content: "";
   inset: 0;
   pointer-events: none;
@@ -67,8 +54,8 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-display), sans-serif;
-  letter-spacing: -0.04em;
+  font-family: var(--font-sans);
+  letter-spacing: -0.03em;
 }
 
 p,
@@ -79,12 +66,12 @@ textarea,
 select,
 label,
 a {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
 }
 
 code,
 .mono {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
 }
 
 ::selection {
@@ -121,24 +108,8 @@ code,
   box-shadow: 0 0 0 1px rgba(95, 225, 255, 0.35), 0 0 28px rgba(95, 225, 255, 0.16);
 }
 
-.grid-lines {
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-
 .ticker-mask {
   mask-image: linear-gradient(180deg, transparent, black 12%, black 88%, transparent);
-}
-
-@keyframes scanline {
-  0% {
-    transform: translateY(-100%);
-  }
-  100% {
-    transform: translateY(100%);
-  }
 }
 
 @keyframes pulse-ring {

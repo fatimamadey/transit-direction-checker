@@ -109,29 +109,13 @@ with check ((auth.jwt() ->> 'sub') = clerk_user_id);
 create policy "boards_public_read"
 on boards
 for select
-using (true);
-
-create policy "board_members_read_public"
-on board_members
-for select
-using (true);
-
-create policy "sources_public_read"
-on sources
-for select
-using (true);
-
-create policy "board_sources_public_read"
-on board_sources
-for select
-using (true);
-
-create policy "events_public_read"
-on events
-for select
-using (true);
-
-create policy "board_events_public_read"
-on board_events
-for select
-using (true);
+using (
+  is_public
+  or exists (
+    select 1
+    from board_members
+    join users on users.id = board_members.user_id
+    where board_members.board_id = boards.id
+      and users.clerk_user_id = (auth.jwt() ->> 'sub')
+  )
+);

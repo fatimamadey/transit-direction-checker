@@ -1,6 +1,12 @@
 # Pulseboard
 
-`Pulseboard` is a GitHub activity dashboard built around named boards. Each board is a clear group of tracked GitHub users and repositories. The landing page and dashboard show what each board is called and exactly which sources it tracks. Opening a board takes you to the detail page with activity stats, charts, and the recent event stream. The frontend polls our own API, and the worker polls GitHub sources with ETags and fanout.
+`Pulseboard` is a GitHub activity dashboard built around named boards. A board is a clear group of tracked GitHub users and repositories. The product is organized around three surfaces:
+
+- `/` shows a minimal product intro and real public boards immediately
+- `/boards` is the public directory for exploring and joining boards
+- `/boards/[slug]` is the live board workspace with the feed, tracked sources, and board controls
+
+The frontend polls our own API. The worker polls GitHub sources with ETags and fanout.
 
 ## Stack
 
@@ -13,15 +19,19 @@
 
 ## Product shape
 
-- Public boards only
-- Users can create boards, join boards, and add tracked sources
+- Boards can be public or private
+- Users can create boards, join boards, rename boards, and add tracked sources
 - Sources are globally deduplicated by `type + value`
 - Worker polls GitHub sources, not boards
 - Browser polls board snapshots every ~5 seconds
-- UI uses a dark Radical-inspired control-room aesthetic with charts, source orbit visuals, and an animated live ticker
-- Board cards always show the board name, tracked repos/users, and the main action to open the board
+- UI uses a dark editor-style control-room aesthetic with rails, board rows, compact charts, and a feed-first board page
+- Board listings always show:
+  - board name
+  - tracked repos/users
+  - freshness
+  - primary action
 - Entry flow is split clearly:
-  - `/` explains the app and shows a public-board carousel
+  - `/` explains the app in one pass and shows real boards immediately
   - `/boards` is the public board directory
   - `/dashboard` is the signed-in workspace for your boards
 
@@ -51,7 +61,6 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
 NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ```
 
@@ -74,6 +83,7 @@ Run:
 If you already have an existing database, also run:
 
 3. `supabase/migrations/add_board_visibility.sql`
+4. `supabase/migrations/tighten_public_read_policies.sql`
 
 The seed file creates a few public sample boards so the landing page and public directory are populated immediately.
 
@@ -81,13 +91,7 @@ The seed file creates a few public sample boards so the landing page and public 
 
 Use Clerk for auth and allow the providers you want, currently Google and GitHub.
 
-If you want Supabase Realtime later, create a Clerk JWT template named `supabase` with:
-
-- `sub` = Clerk user id
-- `email` = user email
-- `role` = `authenticated`
-
-The current board UI uses polling, so that JWT template is not required for the main redesigned flow.
+The current product uses polling and server-side API routes. Supabase Realtime and a Clerk JWT template are not required for the main flow.
 
 ### 5. Run locally
 
@@ -120,7 +124,7 @@ GitHub Events API
   -> fan out into board_events
   -> web API routes
   -> browser polling on board pages
-  -> charts, orbit view, live ticker
+  -> board rows, timeline strips, live feed
 ```
 
 ## Important routes
@@ -138,7 +142,6 @@ GitHub Events API
     - new events since cursor
     - board summary
     - timeline buckets
-    - source node activity
     - `serverTime`
 
 ## Deploy
@@ -160,7 +163,6 @@ Set these env vars:
 - `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard`
 - `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard`
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 ### Railway
@@ -179,6 +181,6 @@ Set these env vars:
 
 ## Notes
 
-- `Recharts` is used for the quantitative dashboard visuals.
-- Custom SVG + Tailwind motion is used for source orbit and ticker-style UI.
-- GitHub activity is not truly real-time, so the UI should feel live without pretending the source is instantaneous.
+- `Recharts` is used for compact quantitative visuals.
+- GitHub activity is not truly real-time, so the UI is intentionally honest about freshness.
+- The app no longer reads Supabase directly from the browser; board data flows through Next.js API routes.
