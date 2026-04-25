@@ -27,7 +27,7 @@ export default function SignUpPage() {
           </div>
         </section>
 
-        <section className="flex items-center justify-center rounded-[32px] border border-white/10 bg-white/[0.03] px-4 py-10">
+        <section className="flex items-center justify-center rounded-[32px] border border-white/12 bg-[#18132d]/90 px-4 py-10 shadow-[0_24px_60px_rgba(7,6,15,0.4)]">
           <SignUp />
         </section>
       </div>
