@@ -25,6 +25,7 @@ type BoardRecord = {
   slug: string;
   name: string;
   description: string | null;
+  isPublic: boolean;
 };
 
 export async function getDashboardData(clerkUserId: string): Promise<DashboardData> {
@@ -32,7 +33,7 @@ export async function getDashboardData(clerkUserId: string): Promise<DashboardDa
   const user = await getCurrentDbUser(clerkUserId);
 
   const [{ data: boards, error: boardsError }, { data: memberships, error: membershipsError }] = await Promise.all([
-    supabase.from("boards").select("id, slug, name, description").order("created_at", { ascending: false }),
+    supabase.from("boards").select("id, slug, name, description, is_public").order("created_at", { ascending: false }),
     supabase.from("board_members").select("board_id").eq("user_id", user.id)
   ]);
 
@@ -48,7 +49,8 @@ export async function getDashboardData(clerkUserId: string): Promise<DashboardDa
     id: String(board.id),
     slug: String(board.slug),
     name: String(board.name),
-    description: (board.description as string | null) ?? null
+    description: (board.description as string | null) ?? null,
+    isPublic: Boolean(board.is_public)
   }));
 
   const boardIds = boardRows.map((board) => board.id);
@@ -66,7 +68,7 @@ export async function getDashboardData(clerkUserId: string): Promise<DashboardDa
   return {
     overview: buildDashboardOverview(boardList, recentEvents, trackedSources),
     joinedBoards: boardList.filter((board) => board.joined),
-    publicBoards: boardList
+    publicBoards: boardList.filter((board) => board.isPublic)
   };
 }
 
@@ -74,7 +76,8 @@ export async function getPublicBoardsData(limit = 6): Promise<BoardListItem[]> {
   const supabase = getServiceRoleClient();
   const { data: boards, error } = await supabase
     .from("boards")
-    .select("id, slug, name, description")
+    .select("id, slug, name, description, is_public")
+    .eq("is_public", true)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -86,7 +89,8 @@ export async function getPublicBoardsData(limit = 6): Promise<BoardListItem[]> {
     id: String(board.id),
     slug: String(board.slug),
     name: String(board.name),
-    description: (board.description as string | null) ?? null
+    description: (board.description as string | null) ?? null,
+    isPublic: Boolean(board.is_public)
   }));
 
   const boardIds = boardRows.map((board) => board.id);
@@ -102,11 +106,16 @@ export async function getPublicBoardsData(limit = 6): Promise<BoardListItem[]> {
 
 export async function getBoardPageData(slug: string, clerkUserId: string | null): Promise<BoardPageData> {
   const board = await getBoardBySlug(slug);
+  const isMember = clerkUserId ? await isBoardMember(clerkUserId, board.id) : false;
+
+  if (!board.isPublic && !isMember) {
+    throw new Error("Board not found.");
+  }
+
   const counts = await getBoardCounts([board.id]);
   const sources = await getBoardSources(board.id);
   const initialEvents = await getBoardEvents(board.id, null, 20);
   const recentEvents = await getBoardEvents(board.id, null, 90, BOARD_WINDOW_HOURS);
-  const isMember = clerkUserId ? await isBoardMember(clerkUserId, board.id) : false;
 
   return {
     signedIn: Boolean(clerkUserId),
@@ -115,6 +124,7 @@ export async function getBoardPageData(slug: string, clerkUserId: string | null)
       slug: board.slug,
       name: board.name,
       description: board.description,
+      isPublic: board.isPublic,
       memberCount: counts.get(board.id)?.members ?? 0,
       sourceCount: counts.get(board.id)?.sources ?? 0
     },
@@ -128,8 +138,18 @@ export async function getBoardPageData(slug: string, clerkUserId: string | null)
   };
 }
 
-export async function getBoardSnapshotBySlug(slug: string, since: string | null): Promise<BoardSnapshot> {
+export async function getBoardSnapshotBySlug(
+  slug: string,
+  since: string | null,
+  clerkUserId: string | null
+): Promise<BoardSnapshot> {
   const board = await getBoardBySlug(slug);
+  const isMember = clerkUserId ? await isBoardMember(clerkUserId, board.id) : false;
+
+  if (!board.isPublic && !isMember) {
+    throw new Error("Board not found.");
+  }
+
   const sources = await getBoardSources(board.id);
   const [events, recentEvents] = await Promise.all([
     getBoardEvents(board.id, since, 40),
@@ -145,8 +165,14 @@ export async function getBoardSnapshotBySlug(slug: string, since: string | null)
   };
 }
 
-export async function getBoardEventsBySlug(slug: string, since: string | null, limit = 50) {
+export async function getBoardEventsBySlug(slug: string, since: string | null, clerkUserId: string | null, limit = 50) {
   const board = await getBoardBySlug(slug);
+  const isMember = clerkUserId ? await isBoardMember(clerkUserId, board.id) : false;
+
+  if (!board.isPublic && !isMember) {
+    throw new Error("Board not found.");
+  }
+
   return getBoardEvents(board.id, since, limit);
 }
 
@@ -154,7 +180,7 @@ async function getBoardBySlug(slug: string): Promise<BoardRecord> {
   const supabase = getServiceRoleClient();
   const { data: board, error } = await supabase
     .from("boards")
-    .select("id, slug, name, description")
+    .select("id, slug, name, description, is_public")
     .eq("slug", slug)
     .single();
 
@@ -166,7 +192,8 @@ async function getBoardBySlug(slug: string): Promise<BoardRecord> {
     id: String(board.id),
     slug: String(board.slug),
     name: String(board.name),
-    description: (board.description as string | null) ?? null
+    description: (board.description as string | null) ?? null,
+    isPublic: Boolean(board.is_public)
   };
 }
 
@@ -489,6 +516,7 @@ function toBoardListItem(
     slug: board.slug,
     name: board.name,
     description: board.description,
+    isPublic: board.isPublic,
     memberCount: countEntry.members,
     sourceCount: countEntry.sources,
     trackedSources: trackedSources.slice(0, 4),

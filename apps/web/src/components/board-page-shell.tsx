@@ -33,6 +33,7 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
   const [hasMounted, setHasMounted] = useState(false);
   const [boardName, setBoardName] = useState(data.board.name);
   const [boardDescription, setBoardDescription] = useState(data.board.description ?? "");
+  const [isPublic, setIsPublic] = useState(data.board.isPublic);
   const [sourceType, setSourceType] = useState<"user" | "repo">("repo");
   const [sourceValue, setSourceValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +90,8 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
       },
       body: JSON.stringify({
         name: boardName,
-        description: boardDescription
+        description: boardDescription,
+        isPublic
       })
     });
 
@@ -119,6 +121,7 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
+              <SummaryPill label="visibility" value={data.board.isPublic ? "public" : "private"} />
               <SummaryPill label="members" value={data.board.memberCount} />
               <SummaryPill label="sources" value={data.board.sourceCount} />
               <SummaryPill label="events" value={summary.totalEvents} />
@@ -295,6 +298,26 @@ export function BoardPageShell({ data }: { data: BoardPageData }) {
                   onChange={(event) => setBoardDescription(event.target.value)}
                   value={boardDescription}
                 />
+                <label className="flex items-center justify-between rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
+                  <div>
+                    <p className="mono text-[10px] uppercase tracking-[0.22em] text-violet-200/55">Visibility</p>
+                    <p className="mt-1 text-sm text-violet-100/70">
+                      {isPublic ? "Anyone can find and join this board." : "Only joined members can open this board."}
+                    </p>
+                  </div>
+                  <button
+                    aria-pressed={isPublic}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      isPublic
+                        ? "bg-[linear-gradient(135deg,#ff4fd8,#7c5cff)] text-white shadow-[0_14px_40px_rgba(255,79,216,0.25)]"
+                        : "border border-white/12 bg-white/5 text-white hover:border-cyan-300/35 hover:bg-cyan-300/10"
+                    }`}
+                    onClick={() => setIsPublic((current) => !current)}
+                    type="button"
+                  >
+                    {isPublic ? "Public" : "Private"}
+                  </button>
+                </label>
                 {error ? <p className="text-sm font-medium text-rose-300">{error}</p> : null}
                 <button
                   className="w-full rounded-full border border-white/12 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-cyan-300/35 hover:bg-cyan-300/10 disabled:opacity-60"
@@ -552,7 +575,7 @@ function TickerCard({ event }: { event: BoardEvent }) {
   );
 }
 
-function SummaryPill({ label, value }: { label: string; value: number }) {
+function SummaryPill({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
       <span className="mono text-[11px] uppercase tracking-[0.22em] text-violet-200/60">{label}</span>

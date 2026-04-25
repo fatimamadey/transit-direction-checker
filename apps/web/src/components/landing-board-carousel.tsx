@@ -73,7 +73,14 @@ export function LandingBoardCarousel({ boards }: LandingBoardCarouselProps) {
                 <h3 className="mt-2 text-2xl font-semibold text-white">{board.name}</h3>
                 <p className="mt-2 text-sm leading-6 text-violet-100/68">{board.description ?? "No description."}</p>
               </div>
-              <span className="mono text-[11px] uppercase tracking-[0.22em] text-cyan-200/75">open</span>
+              <div className="flex flex-col items-end gap-2">
+                {!board.isPublic ? (
+                  <span className="mono rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-amber-200">
+                    private
+                  </span>
+                ) : null}
+                <span className="mono text-[11px] uppercase tracking-[0.22em] text-cyan-200/75">open</span>
+              </div>
             </div>
 
             <div className="mt-5 space-y-2">

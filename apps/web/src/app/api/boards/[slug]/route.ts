@@ -11,9 +11,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ slug:
   }
 
   const { slug } = await context.params;
-  const payload = (await request.json()) as { name?: string; description?: string };
+  const payload = (await request.json()) as { name?: string; description?: string; isPublic?: boolean };
   const name = payload.name?.trim();
   const description = payload.description?.trim() ?? null;
+  const isPublic = payload.isPublic ?? true;
 
   if (!name) {
     return NextResponse.json({ error: "Board name is required." }, { status: 400 });
@@ -48,7 +49,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ slug:
     .from("boards")
     .update({
       name,
-      description
+      description,
+      is_public: isPublic
     })
     .eq("id", board.id);
 
@@ -56,5 +58,5 @@ export async function PATCH(request: Request, context: { params: Promise<{ slug:
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, name, description });
+  return NextResponse.json({ ok: true, name, description, isPublic });
 }

@@ -13,6 +13,7 @@ create table if not exists boards (
   slug text not null unique,
   name text not null,
   description text,
+  is_public boolean not null default true,
   created_by_user_id uuid not null references users(id) on delete cascade,
   created_at timestamptz not null default now()
 );

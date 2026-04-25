@@ -24,12 +24,13 @@ with seeded_boards as (
     on board.owner_clerk_user_id = u.clerk_user_id
 )
 insert into boards (slug, name, description, created_by_user_id)
-select slug, name, description, user_id
+select slug, name, description, true, user_id
 from seeded_boards
 on conflict (slug) do update
 set
   name = excluded.name,
-  description = excluded.description;
+  description = excluded.description,
+  is_public = excluded.is_public;
 
 insert into board_members (board_id, user_id)
 select b.id, u.id

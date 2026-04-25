@@ -49,6 +49,7 @@ Primary action:
 - users explore public boards
 - users join boards
 - users create boards
+- users can choose whether a board is public or private
 
 Each board shows a feed of GitHub activity from tracked sources:
 

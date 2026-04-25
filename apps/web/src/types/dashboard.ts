@@ -72,6 +72,7 @@ export type BoardListItem = {
   slug: string;
   name: string;
   description: string | null;
+  isPublic: boolean;
   memberCount: number;
   sourceCount: number;
   trackedSources: BoardSource[];
@@ -105,6 +106,7 @@ export type BoardPageData = {
     slug: string;
     name: string;
     description: string | null;
+    isPublic: boolean;
     memberCount: number;
     sourceCount: number;
   };

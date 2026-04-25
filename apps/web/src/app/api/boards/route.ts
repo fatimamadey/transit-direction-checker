@@ -6,9 +6,13 @@ import { syncProfileAction } from "@/actions/sync-profile";
 
 export async function GET() {
   const supabase = getServiceRoleClient();
-  const { data, error } = await supabase.from("boards").select("id, slug, name, description").order("created_at", {
-    ascending: false
-  });
+  const { data, error } = await supabase
+    .from("boards")
+    .select("id, slug, name, description, is_public")
+    .eq("is_public", true)
+    .order("created_at", {
+      ascending: false
+    });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -24,9 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const payload = (await request.json()) as { name?: string; description?: string };
+  const payload = (await request.json()) as { name?: string; description?: string; isPublic?: boolean };
   const name = payload.name?.trim();
   const description = payload.description?.trim() ?? null;
+  const isPublic = payload.isPublic ?? true;
 
   if (!name) {
     return NextResponse.json({ error: "Board name is required." }, { status: 400 });
@@ -47,9 +52,10 @@ export async function POST(request: Request) {
       slug,
       name,
       description,
+      is_public: isPublic,
       created_by_user_id: profile.id
     })
-    .select("id, slug, name")
+    .select("id, slug, name, is_public")
     .single();
 
   if (error || !board) {

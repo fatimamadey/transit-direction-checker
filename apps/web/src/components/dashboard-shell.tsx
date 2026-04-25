@@ -15,6 +15,7 @@ type DashboardShellProps = {
 export function DashboardShell({ dashboardData, userName }: DashboardShellProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
     const response = await fetch("/api/boards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description })
+      body: JSON.stringify({ name, description, isPublic })
     });
 
     const payload = (await response.json()) as { slug?: string; error?: string };
@@ -42,6 +43,7 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
 
     setName("");
     setDescription("");
+    setIsPublic(true);
     router.push(`/boards/${payload.slug}`);
     router.refresh();
   }
@@ -134,6 +136,26 @@ export function DashboardShell({ dashboardData, userName }: DashboardShellProps)
                 placeholder="Repos and users for the frontend team."
                 value={description}
               />
+            </label>
+            <label className="flex items-center justify-between rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
+              <div>
+                <p className="mono text-[10px] uppercase tracking-[0.22em] text-violet-200/55">Visibility</p>
+                <p className="mt-1 text-sm text-violet-100/70">
+                  {isPublic ? "Anyone can find and join this board." : "Only joined members can open this board."}
+                </p>
+              </div>
+              <button
+                aria-pressed={isPublic}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  isPublic
+                    ? "bg-[linear-gradient(135deg,#ff4fd8,#7c5cff)] text-white shadow-[0_14px_40px_rgba(255,79,216,0.25)]"
+                    : "border border-white/12 bg-white/5 text-white hover:border-cyan-300/35 hover:bg-cyan-300/10"
+                }`}
+                onClick={() => setIsPublic((current) => !current)}
+                type="button"
+              >
+                {isPublic ? "Public" : "Private"}
+              </button>
             </label>
             {error ? <p className="text-sm font-medium text-rose-300">{error}</p> : null}
             <button
@@ -232,6 +254,11 @@ function BoardCard({ board }: { board: BoardListItem }) {
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <p className="text-2xl font-semibold text-white">{board.name}</p>
+            {!board.isPublic ? (
+              <span className="mono rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-amber-200">
+                private
+              </span>
+            ) : null}
             {board.joined ? (
               <span className="mono rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-emerald-200">
                 joined

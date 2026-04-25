@@ -98,11 +98,18 @@ function PublicBoardCard({ board, signedIn }: { board: BoardListItem; signedIn: 
           <h2 className="mt-2 text-2xl font-semibold text-white">{board.name}</h2>
           <p className="mt-2 text-sm leading-6 text-violet-100/68">{board.description ?? "No description."}</p>
         </div>
-        {board.joined ? (
-          <span className="mono rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-emerald-200">
-            joined
-          </span>
-        ) : null}
+        <div className="flex flex-col items-end gap-2">
+          {!board.isPublic ? (
+            <span className="mono rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-amber-200">
+              private
+            </span>
+          ) : null}
+          {board.joined ? (
+            <span className="mono rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-emerald-200">
+              joined
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-4 space-y-2">

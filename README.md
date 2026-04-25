@@ -71,6 +71,10 @@ Run:
 1. `supabase/schema.sql`
 2. `supabase/seed.sql`
 
+If you already have an existing database, also run:
+
+3. `supabase/migrations/add_board_visibility.sql`
+
 The seed file creates a few public sample boards so the landing page and public directory are populated immediately.
 
 ### 4. Configure Clerk
